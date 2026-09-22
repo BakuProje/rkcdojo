@@ -20,6 +20,8 @@ export interface RegistrationData {
   whatsapp: string;
   address: string;
   age: string;
+  status?: string;
+  institution?: string;
   occupation: string;
   program: string;
   motivation: string;
@@ -154,29 +156,49 @@ export default function SuccessModal({ isOpen, onClose, data }: SuccessModalProp
                 <span className="font-bold text-white text-sm sm:text-base">{data.fullName}</span>
               </div>
 
-              {/* Status / Instansi */}
-              <div className="flex items-center justify-between border-b border-white/5 pb-3">
-                <span className="text-gray-400 flex items-center gap-2 font-medium">
-                  <Briefcase className="w-4 h-4 text-red-500" /> Status / Instansi
-                </span>
-                <span className="font-semibold text-red-400 bg-red-950/40 px-3 py-1 rounded-lg border border-red-500/30 text-xs sm:text-sm">
-                  {data.occupation || "Pelajar / Mahasiswa"}
-                </span>
-              </div>
-
-              {/* Tgl Lahir / Usia & Jenis Kelamin */}
+              {/* Status & Asal Sekolah / Instansi (TERPISAH) */}
               <div className="grid grid-cols-2 gap-3 border-b border-white/5 pb-3">
                 <div>
                   <span className="text-gray-400 text-xs flex items-center gap-1.5 font-medium">
-                    <Calendar className="w-3.5 h-3.5 text-red-500" /> Tgl Lahir / Usia
+                    <Briefcase className="w-3.5 h-3.5 text-red-500" /> Status
                   </span>
-                  <p className="font-semibold text-white mt-1">
-                    {data.birthDate} ({data.age} th)
+                  <span className="font-semibold text-red-400 bg-red-950/40 px-2.5 py-0.5 rounded-lg border border-red-500/30 text-xs inline-block mt-1">
+                    {data.status || (data.occupation ? data.occupation.split("(")[0].trim() : "Pelajar / Mahasiswa")}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-gray-400 text-xs font-medium block">
+                    Asal Sekolah / Instansi
+                  </span>
+                  <p className="font-semibold text-white mt-1 text-xs sm:text-sm truncate">
+                    {data.institution && data.institution !== "-"
+                      ? data.institution
+                      : data.occupation && data.occupation.includes("(")
+                      ? data.occupation.substring(data.occupation.indexOf("(") + 1, data.occupation.lastIndexOf(")")).trim()
+                      : "-"}
+                  </p>
+                </div>
+              </div>
+
+              {/* Tanggal Lahir, Usia & Jenis Kelamin (TERPISAH) */}
+              <div className="grid grid-cols-3 gap-2 border-b border-white/5 pb-3">
+                <div>
+                  <span className="text-gray-400 text-[11px] sm:text-xs flex items-center gap-1 font-medium">
+                    <Calendar className="w-3.5 h-3.5 text-red-500" /> Tanggal Lahir
+                  </span>
+                  <p className="font-semibold text-white mt-1 text-xs sm:text-sm font-mono">
+                    {data.birthDate || "-"}
                   </p>
                 </div>
                 <div>
-                  <span className="text-gray-400 text-xs font-medium">Jenis Kelamin</span>
-                  <p className="font-semibold text-white mt-1">{data.gender}</p>
+                  <span className="text-gray-400 text-[11px] sm:text-xs font-medium block">Usia</span>
+                  <p className="font-semibold text-white mt-1 text-xs sm:text-sm">
+                    {data.age ? `${data.age} th` : "-"}
+                  </p>
+                </div>
+                <div>
+                  <span className="text-gray-400 text-[11px] sm:text-xs font-medium block">Jenis Kelamin</span>
+                  <p className="font-semibold text-white mt-1 text-xs sm:text-sm">{data.gender || "-"}</p>
                 </div>
               </div>
 

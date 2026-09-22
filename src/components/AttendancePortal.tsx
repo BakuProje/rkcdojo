@@ -1246,7 +1246,7 @@ export default function AttendancePortal() {
               <div className="flex items-center gap-2">
                 <UserCheck className="w-4 h-4 text-red-500" />
                 <span className="text-xs font-bold text-gray-200 uppercase tracking-wider">
-                  {searchQuery ? "Hasil Pencarian Karateka" : "Daftar Nama Karateka (Pilih untuk Absen)"}
+                  {searchQuery ? "Hasil Pencarian Karateka" : "Daftar Nama Karateka"}
                 </span>
               </div>
               <span
@@ -1288,15 +1288,15 @@ export default function AttendancePortal() {
                         setSelectedMember(m);
                       }}
                       className={`p-3 sm:p-3.5 bg-[#18181e]/80 border rounded-xl flex items-center justify-between transition-all shadow-sm ${hasCheckedInToday
-                          ? "border-emerald-500/30 opacity-80 cursor-default"
-                          : "border-white/5 cursor-pointer hover:border-red-500/40"
+                        ? "border-emerald-500/30 opacity-80 cursor-default"
+                        : "border-white/5 cursor-pointer hover:border-red-500/40"
                         }`}
                     >
                       <div className="flex items-center gap-3">
                         <div
                           className={`w-9 h-9 rounded-full flex items-center justify-center font-extrabold text-sm flex-shrink-0 shadow-md ${hasCheckedInToday
-                              ? "bg-emerald-600 text-white"
-                              : "bg-gradient-to-br from-red-600 to-rose-700 text-white"
+                            ? "bg-emerald-600 text-white"
+                            : "bg-gradient-to-br from-red-600 to-rose-700 text-white"
                             }`}
                         >
                           {hasCheckedInToday ? <Check className="w-5 h-5 text-white" /> : m.full_name.charAt(0)}

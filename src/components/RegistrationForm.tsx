@@ -139,6 +139,8 @@ export default function RegistrationForm() {
       whatsapp: formData.whatsapp.trim(),
       address: formData.address.trim(),
       age: formData.age.trim(),
+      status: formData.status,
+      institution: formData.institution.trim() || "-",
       occupation: formData.institution.trim()
         ? `${formData.status} (${formData.institution.trim()})`
         : formData.status,
