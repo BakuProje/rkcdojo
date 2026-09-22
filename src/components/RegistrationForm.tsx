@@ -246,22 +246,22 @@ export default function RegistrationForm() {
   };
 
   return (
-    <div className="w-full max-w-xl mx-auto pt-0 pb-1">
+    <div className="w-full max-w-xl mx-auto py-1">
       {/* Header Section with Logo on the Right */}
-      <div className="flex items-start justify-between gap-3 mb-2.5 sm:mb-4">
+      <div className="flex items-start justify-between gap-3 mb-4 sm:mb-5">
         <div className="flex-1">
-          <p className="text-[10px] sm:text-[11px] font-extrabold uppercase tracking-[0.2em] text-red-500 mb-0.5 sm:mb-1 drop-shadow-sm">
+          <p className="text-[10px] sm:text-[11px] font-extrabold uppercase tracking-[0.2em] text-red-500 mb-0.5 sm:mb-1">
             RKC KYOKUSHIN CLUB
           </p>
 
-          <h2 className="text-xl sm:text-2xl lg:text-[1.85rem] font-black uppercase tracking-tight italic font-display leading-tight drop-shadow-[0_4px_16px_rgba(0,0,0,0.95)]">
-            <span className="text-white drop-shadow-md">FORM </span>
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-500 via-rose-500 to-red-400 drop-shadow-md">
+          <h2 className="text-xl sm:text-2xl lg:text-[1.85rem] font-black uppercase tracking-tight italic font-display leading-tight">
+            <span className="text-white">FORM </span>
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-500 via-red-600 to-rose-500">
               PENDAFTARAN
             </span>
           </h2>
 
-          <p className="text-gray-200 text-[11px] sm:text-xs mt-1 leading-snug max-w-md drop-shadow-md">
+          <p className="text-gray-300 text-[11px] sm:text-xs mt-1 leading-snug max-w-md">
             Bergabunglah bersama kami dan mulailah perjalanan baru untuk menjadi pribadi yang lebih disiplin, kuat, dan percaya diri.
           </p>
         </div>
