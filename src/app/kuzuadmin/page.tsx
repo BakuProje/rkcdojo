@@ -441,8 +441,9 @@ export default function KuzuAdminPage() {
             full_name: r.full_name.trim(),
             belt_level: r.motivation && r.motivation.includes("Sabuk") ? r.motivation : "Sabuk Putih (Kyu 10)",
             phone: r.whatsapp,
-            dojo_branch: r.address || "Racing Kyokushin Club",
+            dojo_branch: "Racing Kyokushin Club",
             gender: r.gender as any,
+            age: r.age,
             is_active: true,
             joined_date: r.created_at ? r.created_at.split("T")[0] : new Date().toISOString().split("T")[0],
           });
@@ -1090,8 +1091,9 @@ export default function KuzuAdminPage() {
             full_name: r.full_name.trim(),
             belt_level: r.motivation && r.motivation.includes("Sabuk") ? r.motivation : "Sabuk Putih (Kyu 10)",
             phone: r.whatsapp,
-            dojo_branch: r.address || "Racing Kyokushin Club",
+            dojo_branch: "Racing Kyokushin Club",
             gender: r.gender as any,
+            age: r.age,
             is_active: true,
             joined_date: r.created_at ? r.created_at.split("T")[0] : new Date().toISOString().split("T")[0],
           });
@@ -1558,8 +1560,9 @@ export default function KuzuAdminPage() {
           full_name: a.full_name.trim(),
           belt_level: a.motivation && a.motivation.includes("Sabuk") ? a.motivation : "Sabuk Putih (Kyu 10)",
           phone: a.whatsapp,
-          dojo_branch: a.address || "Racing Kyokushin Club",
+          dojo_branch: "Racing Kyokushin Club",
           gender: a.gender as any,
+          age: a.age,
           is_active: true,
           joined_date: a.created_at ? a.created_at.split("T")[0] : new Date().toISOString().split("T")[0],
         };
@@ -2824,9 +2827,11 @@ export default function KuzuAdminPage() {
                       <tr>
                         <th className="py-3.5 px-4">Tanggal</th>
                         <th className="py-3.5 px-4">Nama Lengkap</th>
-                        <th className="py-3.5 px-4">Gender / Usia</th>
+                        <th className="py-3.5 px-4">Gender</th>
+                        <th className="py-3.5 px-4">Usia</th>
                         <th className="py-3.5 px-4">WhatsApp</th>
-                        <th className="py-3.5 px-4">Status / Instansi</th>
+                        <th className="py-3.5 px-4">Status</th>
+                        <th className="py-3.5 px-4">Instansi</th>
                         <th className="py-3.5 px-4">Status Approval</th>
                         <th className="py-3.5 px-4 text-center">Aksi</th>
                       </tr>
@@ -2863,8 +2868,13 @@ export default function KuzuAdminPage() {
                                   }`}
                               />
                               <span className="text-gray-200">{item.gender}</span>
-                              <span className="text-gray-500">({item.age} th)</span>
                             </div>
+                          </td>
+
+                          <td className="py-3.5 px-4">
+                            <span className="text-gray-300 font-medium">
+                              {item.age ? `${item.age} th` : "-"}
+                            </span>
                           </td>
 
                           <td className="py-3.5 px-4" onClick={(e) => e.stopPropagation()}>
@@ -2878,12 +2888,13 @@ export default function KuzuAdminPage() {
                           </td>
 
                           <td className="py-3.5 px-4">
-                            <span className="text-gray-300 block">{item.status}</span>
-                            {item.institution && (
-                              <span className="text-[11px] text-gray-500 block truncate max-w-[160px]">
-                                {item.institution}
-                              </span>
-                            )}
+                            <span className="text-gray-200 font-medium block">{item.status || "-"}</span>
+                          </td>
+
+                          <td className="py-3.5 px-4">
+                            <span className="text-xs text-gray-400 block truncate max-w-[160px]">
+                              {item.institution || "-"}
+                            </span>
                           </td>
 
                           <td className="py-3.5 px-4" onClick={(e) => e.stopPropagation()}>
@@ -4101,7 +4112,8 @@ export default function KuzuAdminPage() {
                       <th className="py-2.5 px-3">Gender</th>
                       <th className="py-2.5 px-3">Usia</th>
                       <th className="py-2.5 px-3">WhatsApp</th>
-                      <th className="py-2.5 px-3">Status / Instansi</th>
+                      <th className="py-2.5 px-3">Status</th>
+                      <th className="py-2.5 px-3">Instansi</th>
                       <th className="py-2.5 px-3">Status Penerimaan</th>
                     </tr>
                   </thead>
@@ -4113,7 +4125,8 @@ export default function KuzuAdminPage() {
                         <td className="py-2 px-3">{r.gender}</td>
                         <td className="py-2 px-3">{r.age ? `${r.age} th` : "-"}</td>
                         <td className="py-2 px-3 font-mono">{r.whatsapp}</td>
-                        <td className="py-2 px-3">{r.institution ? `${r.status} (${r.institution})` : r.status}</td>
+                        <td className="py-2 px-3">{r.status || "-"}</td>
+                        <td className="py-2 px-3">{r.institution || "-"}</td>
                         <td className="py-2 px-3 font-semibold">{r.registration_status || "Baru"}</td>
                       </tr>
                     ))}
@@ -4399,12 +4412,15 @@ export default function KuzuAdminPage() {
                     <span className="font-mono font-bold text-emerald-400">{selectedRecord.whatsapp}</span>
                   </div>
 
-                  <div className="border-b border-white/5 pb-2">
-                    <span className="text-gray-400 block text-xs mb-1">Status & Asal Sekolah/Instansi</span>
-                    <span className="font-semibold text-gray-200 block">{selectedRecord.status}</span>
-                    {selectedRecord.institution && (
-                      <span className="text-xs text-gray-400 block">{selectedRecord.institution}</span>
-                    )}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 border-b border-white/5 pb-2">
+                    <div>
+                      <span className="text-gray-400 block text-xs mb-0.5">Status</span>
+                      <span className="font-semibold text-gray-200 block">{selectedRecord.status || "-"}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-400 block text-xs mb-0.5">Instansi</span>
+                      <span className="font-semibold text-gray-200 block">{selectedRecord.institution || "-"}</span>
+                    </div>
                   </div>
 
                   <div className="border-b border-white/5 pb-2">

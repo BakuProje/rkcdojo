@@ -37,6 +37,7 @@ export interface MemberRecord {
   phone: string;
   dojo_branch: string;
   gender?: "Laki-laki" | "Perempuan" | string;
+  age?: string;
   is_active: boolean;
   joined_date?: string;
   created_at?: string;

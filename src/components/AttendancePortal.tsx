@@ -364,6 +364,23 @@ export default function AttendancePortal() {
         console.warn("Supabase members error:", err);
       }
 
+      // Normalize dojo_branch and sync age from approved registrations
+      localList = localList.map((m) => {
+        const isDojoAddress = !m.dojo_branch || m.dojo_branch.toLowerCase().startsWith("jl") || m.dojo_branch.toLowerCase().includes("sukamaju");
+        const regMatch = allApproved.find(
+          (r) =>
+            (m.member_id && r.reg_id && m.member_id.toLowerCase() === r.reg_id.toLowerCase()) ||
+            (m.full_name && r.full_name && m.full_name.toLowerCase().trim() === r.full_name.toLowerCase().trim()) ||
+            (m.phone && r.whatsapp && m.phone === r.whatsapp)
+        );
+        return {
+          ...m,
+          dojo_branch: isDojoAddress ? "Racing Kyokushin Club" : (m.dojo_branch || "Racing Kyokushin Club"),
+          age: regMatch?.age || m.age,
+          gender: regMatch?.gender || m.gender,
+        };
+      });
+
       // 3. Auto-enroll all approved registrations
       allApproved.forEach((r) => {
         const exists = localList.some(
@@ -379,8 +396,9 @@ export default function AttendancePortal() {
             full_name: r.full_name,
             belt_level: r.motivation && r.motivation.includes("Sabuk") ? r.motivation : "Sabuk Putih (Kyu 10)",
             phone: r.whatsapp,
-            dojo_branch: r.address || "Racing Kyokushin Club",
+            dojo_branch: "Racing Kyokushin Club",
             gender: r.gender,
+            age: r.age,
             is_active: true,
             joined_date: r.created_at ? r.created_at.split("T")[0] : undefined,
           });
@@ -1329,8 +1347,11 @@ export default function AttendancePortal() {
                               </span>
                             )}
                           </div>
-                          <p className="text-[11px] text-gray-400 font-mono mt-0.5">
-                            <span className="text-gray-400">{m.dojo_branch || "Racing Kyokushin Club"}</span>
+                          <p className="text-[11px] text-gray-400 font-mono mt-0.5 flex items-center gap-1.5 flex-wrap">
+                            <span className="text-gray-300">
+                              {m.dojo_branch && !m.dojo_branch.toLowerCase().startsWith("jl") ? m.dojo_branch : "Racing Kyokushin Club"}
+                            </span>
+                            {m.age && <span className="text-gray-400 font-semibold">• {m.age} th</span>}
                           </p>
                         </div>
                       </div>
@@ -1405,8 +1426,9 @@ export default function AttendancePortal() {
                           <h3 className="text-sm sm:text-base font-bold text-white truncate">
                             {selectedMember.full_name}
                           </h3>
-                          <p className="text-xs text-gray-400 font-mono mt-0.5">
-                            {selectedMember.dojo_branch || "Racing Kyokushin Club"}
+                          <p className="text-xs text-gray-400 font-mono mt-0.5 flex items-center gap-1.5">
+                            <span>{selectedMember.dojo_branch && !selectedMember.dojo_branch.toLowerCase().startsWith("jl") ? selectedMember.dojo_branch : "Racing Kyokushin Club"}</span>
+                            {selectedMember.age && <span className="text-gray-400 font-semibold">• {selectedMember.age} th</span>}
                           </p>
                         </div>
                       </div>
@@ -1422,7 +1444,7 @@ export default function AttendancePortal() {
 
                     {/* Branch and Session info */}
                     <div className="pt-2.5 border-t border-white/10 flex items-center justify-between text-[11px] text-gray-300">
-                      <span>{selectedMember.dojo_branch}</span>
+                      <span>{selectedMember.dojo_branch && !selectedMember.dojo_branch.toLowerCase().startsWith("jl") ? selectedMember.dojo_branch : "Racing Kyokushin Club"}</span>
                       <span className="font-mono text-emerald-400 font-semibold tracking-wider">
                         {currentTimeStr ? `${currentTimeStr.slice(0, 5)} WITA` : "WITA"}
                       </span>
