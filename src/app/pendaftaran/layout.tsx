@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://rkckarate.id";
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.rkcdojo.id";
 
 export const metadata: Metadata = {
   title: "Formulir Pendaftaran Murid Baru | RKC Kyokushin Club",
@@ -19,10 +19,10 @@ export const metadata: Metadata = {
     type: "website",
     images: [
       {
-        url: "/images/background.png",
+        url: "/images/bannerrkc.png",
         width: 1200,
         height: 630,
-        alt: "Pendaftaran Murid Baru RKC Kyokushin Club",
+        alt: "Banner RKC Kyokushin Club Makassar",
         type: "image/png",
       },
     ],
@@ -32,7 +32,7 @@ export const metadata: Metadata = {
     title: "Pendaftaran Murid Baru | RKC Kyokushin Club Makassar",
     description:
       "Daftar sekarang di RKC Kyokushin Club Makassar! Formulir online kelas bela diri anak-anak, remaja, dan dewasa.",
-    images: [`${siteUrl}/images/background.png`],
+    images: ["/images/bannerrkc.png"],
   },
 };
 

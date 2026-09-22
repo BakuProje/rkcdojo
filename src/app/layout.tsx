@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://rkckarate.id";
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.rkcdojo.id";
 
 export const viewport: Viewport = {
   themeColor: "#dc2626",
@@ -13,11 +13,11 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: "RKC Kyokushin Club - Dojo Karate Makassar | Pendaftaran & Presensi",
-    template: "%s | RKC Kyokushin Club",
+    default: "RKC Kyokushin Club Makassar - Dojo Karate Makassar",
+    template: "%s | RKC Kyokushin Club Makassar",
   },
   description:
-    "Dojo Karate Kyokushin resmi di Makassar. Pendaftaran murid baru kelas anak-anak, remaja, dan dewasa. Pelatih berlisensi internasional, latihan disiplin fisik & mental, serta portal absensi modern. Karate For A Better Tomorrow.",
+    "Pendaftaran Murid Baru & Portal Presensi Dojo RKC Kyokushin Makassar. Kelas Anak, Remaja, dan Dewasa. Karate For A Better Tomorrow.",
   applicationName: "RKC Kyokushin Club",
   keywords: [
     "Karate Makassar",
@@ -63,36 +63,29 @@ export const metadata: Metadata = {
     ],
   },
   openGraph: {
-    title: "RKC Kyokushin Club - Dojo Karate Makassar | Pendaftaran & Presensi",
+    title: "RKC Kyokushin Club Makassar - Dojo Karate Makassar",
     description:
-      "Bergabunglah bersama Dojo Karate Kyokushin Makassar! Kelas Anak-anak, Remaja & Dewasa dengan pelatih bersertifikasi. Daftar online sekarang & raih disiplin sejati. Karate For A Better Tomorrow. Osu!",
+      "Pendaftaran Murid Baru & Portal Presensi Dojo RKC Kyokushin Makassar. Kelas Anak, Remaja, dan Dewasa. Karate For A Better Tomorrow.",
     url: siteUrl,
     siteName: "RKC Kyokushin Club Makassar",
     locale: "id_ID",
     type: "website",
     images: [
       {
-        url: "/images/background.png",
+        url: "/images/bannerrkc.png",
         width: 1200,
         height: 630,
-        alt: "RKC Kyokushin Club Makassar - Dojo Bela Diri Karate",
-        type: "image/png",
-      },
-      {
-        url: "/images/bgberanda.png",
-        width: 1200,
-        height: 630,
-        alt: "Latihan Karate Kyokushin Dojo RKC Makassar",
+        alt: "Banner RKC Kyokushin Club Makassar",
         type: "image/png",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "RKC Kyokushin Club - Dojo Karate Makassar",
+    title: "RKC Kyokushin Club Makassar - Dojo Karate Makassar",
     description:
       "Pendaftaran Murid Baru & Portal Presensi Dojo RKC Kyokushin Makassar. Kelas Anak, Remaja, dan Dewasa. Karate For A Better Tomorrow.",
-    images: [`${siteUrl}/images/background.png`],
+    images: ["/images/bannerrkc.png"],
     creator: "@rkckarate",
     site: "@rkckarate",
   },
@@ -122,13 +115,13 @@ const jsonLd = {
       alternateName: ["Racing Kyokushin Club", "RKC Karate Makassar", "Dojo RKC"],
       url: siteUrl,
       logo: `${siteUrl}/images/logo.png`,
-      image: `${siteUrl}/images/background.png`,
+      image: `${siteUrl}/images/bannerrkc.png`,
       description:
         "Dojo Karate Kyokushin resmi di Makassar. Melayani pendaftaran kelas bela diri anak-anak, remaja, dan dewasa dengan instruktur bersertifikasi internasional.",
-      telephone: "+6285299887766",
+      telephone: "+6281527641306",
       address: {
         "@type": "PostalAddress",
-        streetAddress: "Jl. Racing Centre / Panakkukang",
+        streetAddress: "Jl. Sukamaju 1 No 2B RT 005/RW 006, Kel Tamamaung, Kec Panakkukang",
         addressLocality: "Makassar",
         addressRegion: "Sulawesi Selatan",
         postalCode: "90231",
@@ -136,8 +129,8 @@ const jsonLd = {
       },
       geo: {
         "@type": "GeoCoordinates",
-        latitude: -5.147665,
-        longitude: 119.432731,
+        latitude: -5.140223,
+        longitude: 119.442611,
       },
       openingHoursSpecification: [
         {
@@ -154,12 +147,6 @@ const jsonLd = {
         },
       ],
       priceRange: "$$",
-      sameAs: [
-        "https://www.instagram.com/rkckarate",
-        "https://www.youtube.com/@rkckarate",
-        "https://www.facebook.com/rkckarate",
-        "https://www.tiktok.com/@rkckarate",
-      ],
     },
     {
       "@type": "WebSite",
@@ -186,6 +173,14 @@ export default function RootLayout({
         <link rel="icon" href="/favicon.ico" sizes="any" />
         <link rel="icon" href="/images/favicon.ico" type="image/x-icon" />
         <link rel="apple-touch-icon" href="/images/logo.png" />
+        <meta property="og:image" content="/images/bannerrkc.png" />
+        <meta property="og:image:secure_url" content="/images/bannerrkc.png" />
+        <meta property="og:image:type" content="image/png" />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        <meta property="og:image:alt" content="Banner RKC Kyokushin Club Makassar" />
+        <meta name="twitter:image" content="/images/bannerrkc.png" />
+        <link rel="image_src" href="/images/bannerrkc.png" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link

@@ -359,18 +359,21 @@ export default function AttendancePortal() {
       // Also check offline registrations
       try {
         const savedOffline = localStorage.getItem("rkc_offline_registrations");
+        const statusMap: Record<string, string> = JSON.parse(localStorage.getItem("rkc_registration_status_map") || "{}");
         if (savedOffline) {
           const offlineList: any[] = JSON.parse(savedOffline);
           offlineList
-            .filter(
-              (r) =>
-                r.registration_status === "Diterima" &&
+            .filter((r) => {
+              const status = statusMap[r.reg_id] || (r.id ? statusMap[r.id] : undefined) || r.registration_status;
+              return (
+                status === "Diterima" &&
                 r.reg_id !== "SETTINGS-CONFIG" &&
                 r.reg_id !== "DELETED_MEMBERS_CONFIG" &&
                 r.status !== "ATTENDANCE_RECORD" &&
                 !deletedRegs.includes(r.reg_id) &&
                 !isMemberDeleted({ member_id: r.reg_id, full_name: r.full_name, phone: r.whatsapp })
-            )
+              );
+            })
             .forEach((r) => {
               const exists = localList.some(
                 (m) =>
@@ -383,9 +386,9 @@ export default function AttendancePortal() {
                   id: `mem-${r.reg_id}`,
                   member_id: r.reg_id,
                   full_name: r.full_name,
-                  belt_level: "Sabuk Putih (Kyu 10)",
+                  belt_level: r.motivation && r.motivation.includes("Sabuk") ? r.motivation : "Sabuk Putih (Kyu 10)",
                   phone: r.whatsapp,
-                  dojo_branch: "Racing Kyokushin Club",
+                  dojo_branch: r.address || "Racing Kyokushin Club",
                   gender: r.gender,
                   is_active: true,
                   joined_date: r.created_at ? r.created_at.split("T")[0] : undefined,

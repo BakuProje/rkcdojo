@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://rkckarate.id";
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.rkcdojo.id";
 
 export const metadata: Metadata = {
   title: "Presensi & Absensi Anggota Dojo | RKC Kyokushin Club",
@@ -19,10 +19,10 @@ export const metadata: Metadata = {
     type: "website",
     images: [
       {
-        url: "/images/bgabsensidekstop.png",
+        url: "/images/bannerrkc.png",
         width: 1200,
         height: 630,
-        alt: "Presensi Anggota Dojo RKC Kyokushin Club",
+        alt: "Banner RKC Kyokushin Club Makassar",
         type: "image/png",
       },
     ],
@@ -32,7 +32,7 @@ export const metadata: Metadata = {
     title: "Presensi Anggota Dojo | RKC Kyokushin Club",
     description:
       "Portal presensi mandiri karateka RKC Kyokushin Club Makassar.",
-    images: [`${siteUrl}/images/bgabsensidekstop.png`],
+    images: ["/images/bannerrkc.png"],
   },
 };
 

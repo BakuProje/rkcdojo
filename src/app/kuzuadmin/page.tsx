@@ -156,6 +156,43 @@ const INITIAL_MEMBERS_DATA: MemberRecord[] = [];
 
 const INITIAL_REGISTRATIONS_DATA: RegistrationRecord[] = [];
 
+const isUUID = (str?: string) =>
+  Boolean(str && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str.trim()));
+
+// Status overrides tracking helpers for persistent status across sessions & reloads
+const getRegistrationStatusOverrides = (): Record<string, string> => {
+  if (typeof window === "undefined") return {};
+  try {
+    return JSON.parse(localStorage.getItem("rkc_registration_status_map") || "{}");
+  } catch {
+    return {};
+  }
+};
+
+const setRegistrationStatusOverride = (regId?: string, status?: string, id?: string) => {
+  if (typeof window === "undefined" || !status) return;
+  try {
+    const map = getRegistrationStatusOverrides();
+    if (regId && regId.trim()) map[regId.trim()] = status;
+    if (id && id.trim()) map[id.trim()] = status;
+    localStorage.setItem("rkc_registration_status_map", JSON.stringify(map));
+  } catch (e) {
+    console.warn("Error saving status map:", e);
+  }
+};
+
+const removeRegistrationStatusOverride = (regId?: string, id?: string) => {
+  if (typeof window === "undefined") return;
+  try {
+    const map = getRegistrationStatusOverrides();
+    if (regId && regId.trim()) delete map[regId.trim()];
+    if (id && id.trim()) delete map[id.trim()];
+    localStorage.setItem("rkc_registration_status_map", JSON.stringify(map));
+  } catch (e) {
+    console.warn("Error removing status override:", e);
+  }
+};
+
 // Blacklist tracking helpers for permanent deletions across sessions & re-renders
 const getDeletedRegistrations = (): string[] => {
   if (typeof window === "undefined") return [];
@@ -274,12 +311,19 @@ export default function KuzuAdminPage() {
     try {
       const savedOffline = localStorage.getItem("rkc_offline_registrations");
       const deletedRegs = getDeletedRegistrations();
+      const statusOverrides = getRegistrationStatusOverrides();
+      let baseList: RegistrationRecord[] = [];
       if (savedOffline) {
-        return JSON.parse(savedOffline).filter(
+        baseList = JSON.parse(savedOffline).filter(
           (r: RegistrationRecord) => !deletedRegs.includes(r.reg_id) && !deletedRegs.includes(r.id || "")
         );
+      } else {
+        baseList = INITIAL_REGISTRATIONS_DATA.filter((r) => !deletedRegs.includes(r.reg_id));
       }
-      return INITIAL_REGISTRATIONS_DATA.filter((r) => !deletedRegs.includes(r.reg_id));
+      return baseList.map((r) => {
+        const override = statusOverrides[r.reg_id] || (r.id ? statusOverrides[r.id] : undefined);
+        return override ? { ...r, registration_status: override } : r;
+      });
     } catch {
       return INITIAL_REGISTRATIONS_DATA;
     }
@@ -632,6 +676,8 @@ export default function KuzuAdminPage() {
     setRefreshing(true);
     try {
       const deletedRegs = getDeletedRegistrations();
+      const statusOverrides = getRegistrationStatusOverrides();
+
       const isDeleted = (r: RegistrationRecord) => {
         if (!r) return true;
         if (
@@ -664,13 +710,17 @@ export default function KuzuAdminPage() {
         offlineList
           .filter((off) => !isDeleted(off))
           .forEach((off) => {
+            const override = statusOverrides[off.reg_id] || (off.id ? statusOverrides[off.id] : undefined);
+            const resolvedStatus = override || off.registration_status || "Baru";
+            const itemWithStatus = { ...off, registration_status: resolvedStatus };
+
             const idx = mergedList.findIndex(
               (m) => (m.reg_id && off.reg_id && m.reg_id === off.reg_id) || (off.id && m.id && m.id === off.id)
             );
             if (idx >= 0) {
-              mergedList[idx] = { ...mergedList[idx], ...off };
+              mergedList[idx] = { ...mergedList[idx], ...itemWithStatus };
             } else {
-              mergedList.unshift(off);
+              mergedList.unshift(itemWithStatus);
             }
           });
       }
@@ -690,15 +740,43 @@ export default function KuzuAdminPage() {
             const idx = mergedList.findIndex(
               (m) => (m.reg_id && dbItem.reg_id && m.reg_id === dbItem.reg_id) || (dbItem.id && m.id && m.id === dbItem.id)
             );
+
+            // Status priority: Status Override -> Local Non-Baru status -> DB status -> "Baru"
+            const override = statusOverrides[dbItem.reg_id] || (dbItem.id ? statusOverrides[dbItem.id] : undefined);
+            const localStatus = idx >= 0 ? mergedList[idx].registration_status : undefined;
+
+            let resolvedStatus = dbItem.registration_status || "Baru";
+            if (override) {
+              resolvedStatus = override;
+            } else if (localStatus && localStatus !== "Baru" && (!dbItem.registration_status || dbItem.registration_status === "Baru")) {
+              resolvedStatus = localStatus;
+              // Background sync to Supabase so DB gets updated
+              if (dbItem.reg_id && !isUUID(dbItem.reg_id)) {
+                supabase.from("registrations").update({ registration_status: localStatus }).eq("reg_id", dbItem.reg_id).then();
+              }
+            }
+
+            const mergedItem: RegistrationRecord = {
+              ...(idx >= 0 ? mergedList[idx] : {}),
+              ...dbItem,
+              registration_status: resolvedStatus,
+            };
+
             if (idx >= 0) {
-              mergedList[idx] = { ...mergedList[idx], ...dbItem };
+              mergedList[idx] = mergedItem;
             } else {
-              mergedList.unshift(dbItem);
+              mergedList.unshift(mergedItem);
             }
           });
       }
 
-      const finalList = mergedList.filter((r) => !isDeleted(r));
+      const finalList = mergedList
+        .filter((r) => !isDeleted(r))
+        .map((r) => {
+          const override = statusOverrides[r.reg_id] || (r.id ? statusOverrides[r.id] : undefined);
+          return override ? { ...r, registration_status: override } : r;
+        });
+
       setRecords(finalList);
       localStorage.setItem("rkc_offline_registrations", JSON.stringify(finalList));
     } catch (err) {
@@ -1300,36 +1378,36 @@ export default function KuzuAdminPage() {
     // 5. Delete from Supabase permanently across ALL tables
     try {
       // a. Delete from members table
-      if (memberId || memberDbId) {
-        if (memberId && memberDbId) {
-          await supabase.from("members").delete().or(`member_id.eq.${memberId},id.eq.${memberDbId}`);
-        } else if (memberId) {
-          await supabase.from("members").delete().eq("member_id", memberId);
-        } else if (memberDbId) {
-          await supabase.from("members").delete().eq("id", memberDbId);
-        }
+      if (memberId) {
+        await supabase.from("members").delete().eq("member_id", memberId);
+      }
+      if (memberDbId) {
+        await supabase.from("members").delete().eq("id", memberDbId);
       }
       if (memberName) {
         await supabase.from("members").delete().ilike("full_name", memberName);
       }
 
       // b. Delete from registrations table (member account and attendance records)
-      if (memberId || memberDbId) {
-        if (memberId && memberDbId) {
-          await supabase.from("registrations").delete().or(`reg_id.eq.${memberId},id.eq.${memberDbId}`);
-        } else if (memberId) {
-          await supabase.from("registrations").delete().eq("reg_id", memberId);
-        } else if (memberDbId) {
-          await supabase.from("registrations").delete().eq("id", memberDbId);
-        }
+      if (memberId) {
+        await supabase.from("registrations").delete().eq("reg_id", memberId);
+      }
+      if (memberDbId && isUUID(memberDbId)) {
+        await supabase.from("registrations").delete().eq("id", memberDbId);
       }
       if (memberName) {
         await supabase.from("registrations").delete().ilike("full_name", memberName);
       }
+      if (memberPhone) {
+        await supabase.from("registrations").delete().eq("whatsapp", memberPhone);
+      }
 
       // c. Delete all attendance logs for this member in attendances table
-      if (memberId || memberName) {
-        await supabase.from("attendances").delete().or(`member_id.eq.${memberId || "none"},member_name.ilike.%${memberName || "none"}%`);
+      if (memberId) {
+        await supabase.from("attendances").delete().eq("member_id", memberId);
+      }
+      if (memberName) {
+        await supabase.from("attendances").delete().ilike("member_name", memberName);
       }
 
       // d. Push updated blacklist tombstone to registrations table so all browsers sync deletion
@@ -1497,7 +1575,13 @@ export default function KuzuAdminPage() {
 
   // Update status (Baru, Dihubungi, Diterima, Ditolak)
   const handleUpdateStatus = async (regId: string, newStatus: string) => {
-    // 1. Immediately update state
+    const rec = records.find((r) => r.reg_id === regId || r.id === regId) || selectedRecord;
+    const dbId = rec?.id;
+
+    // 1. Immediately record in persistent status override map
+    setRegistrationStatusOverride(regId, newStatus, dbId);
+
+    // 2. Immediately update state
     setRecords((prev) => {
       const updated = prev.map((r) =>
         r.reg_id === regId || r.id === regId ? { ...r, registration_status: newStatus } : r
@@ -1510,9 +1594,7 @@ export default function KuzuAdminPage() {
       setSelectedRecord({ ...selectedRecord, registration_status: newStatus });
     }
 
-    const rec = records.find((r) => r.reg_id === regId || r.id === regId) || selectedRecord;
-
-    // 2. If approved ("Diterima"), immediately enroll as Member in Master Anggota & Absensi
+    // 3. If approved ("Diterima"), immediately enroll as Member in Master Anggota & Absensi
     if (newStatus === "Diterima" && rec) {
       // Unblacklist from deleted members & registrations if previously marked
       try {
@@ -1557,11 +1639,37 @@ export default function KuzuAdminPage() {
       });
 
       try {
-        await supabase
-          .from("registrations")
-          .update({ registration_status: newStatus })
-          .or(`reg_id.eq.${regId},id.eq.${regId}`);
+        // Safe update without invalid UUID queries
+        if (regId && !isUUID(regId)) {
+          await supabase.from("registrations").update({ registration_status: newStatus }).eq("reg_id", regId);
+        }
+        if (rec.reg_id && !isUUID(rec.reg_id)) {
+          await supabase.from("registrations").update({ registration_status: newStatus }).eq("reg_id", rec.reg_id);
+        }
+        if (dbId && isUUID(dbId)) {
+          await supabase.from("registrations").update({ registration_status: newStatus }).eq("id", dbId);
+        }
+
+        // Upsert to members table
         await supabase.from("members").upsert(memberToSave);
+
+        // Upsert registration record with "Diterima"
+        await supabase.from("registrations").upsert(
+          {
+            reg_id: rec.reg_id || regId,
+            full_name: rec.full_name,
+            gender: rec.gender || "Laki-laki",
+            birth_date: rec.birth_date || "2000-01-01",
+            age: rec.age || "20",
+            address: rec.address || "Makassar",
+            whatsapp: rec.whatsapp || "-",
+            status: rec.status || "Pelajar",
+            institution: rec.institution || null,
+            motivation: rec.motivation || "-",
+            registration_status: "Diterima",
+          },
+          { onConflict: "reg_id" }
+        );
       } catch (e) {
         console.warn("Supabase update notice:", e);
       }
@@ -1579,11 +1687,38 @@ export default function KuzuAdminPage() {
       });
 
       try {
-        await supabase
-          .from("registrations")
-          .update({ registration_status: newStatus })
-          .or(`reg_id.eq.${regId},id.eq.${regId}`);
-        await supabase.from("members").delete().or(`member_id.eq.${regId},id.eq.mem-${regId}`);
+        if (regId && !isUUID(regId)) {
+          await supabase.from("registrations").update({ registration_status: newStatus }).eq("reg_id", regId);
+        }
+        if (rec?.reg_id && !isUUID(rec.reg_id)) {
+          await supabase.from("registrations").update({ registration_status: newStatus }).eq("reg_id", rec.reg_id);
+        }
+        if (dbId && isUUID(dbId)) {
+          await supabase.from("registrations").update({ registration_status: newStatus }).eq("id", dbId);
+        }
+
+        if (rec) {
+          await supabase.from("registrations").upsert(
+            {
+              reg_id: rec.reg_id || regId,
+              full_name: rec.full_name,
+              gender: rec.gender || "Laki-laki",
+              birth_date: rec.birth_date || "2000-01-01",
+              age: rec.age || "20",
+              address: rec.address || "Makassar",
+              whatsapp: rec.whatsapp || "-",
+              status: rec.status || "Pelajar",
+              institution: rec.institution || null,
+              motivation: rec.motivation || "-",
+              registration_status: newStatus,
+            },
+            { onConflict: "reg_id" }
+          );
+        }
+
+        await supabase.from("members").delete().eq("member_id", regId);
+        if (rec?.reg_id) await supabase.from("members").delete().eq("member_id", rec.reg_id);
+        if (rec?.full_name) await supabase.from("members").delete().ilike("full_name", rec.full_name.trim());
       } catch (e) {
         console.warn("Supabase update notice:", e);
       }
@@ -1597,9 +1732,10 @@ export default function KuzuAdminPage() {
     const phone = targetRecord?.whatsapp?.trim() || "";
     const dbId = targetRecord?.id || "";
 
-    // 1. Add to persistent blacklist (both registrations & members)
+    // 1. Add to persistent blacklist & remove status override
     addDeletedRegistration(regId, dbId, phone);
     addDeletedMember(regId, dbId, fullName, phone);
+    removeRegistrationStatusOverride(regId, dbId);
 
     // 2. Filter records
     const updated = records.filter((r) => r.reg_id !== regId && r.id !== regId);
@@ -1647,17 +1783,37 @@ export default function KuzuAdminPage() {
       }
     } catch (e) { }
 
-    // 6. Delete from Supabase across all tables permanently
+    // 6. Delete from Supabase across all tables permanently without UUID errors
     try {
-      await supabase.from("registrations").delete().or(`reg_id.eq.${regId},id.eq.${regId}`);
+      if (regId && !isUUID(regId)) {
+        await supabase.from("registrations").delete().eq("reg_id", regId);
+      }
+      if (dbId && isUUID(dbId)) {
+        await supabase.from("registrations").delete().eq("id", dbId);
+      }
       if (fullName) {
         await supabase.from("registrations").delete().ilike("full_name", fullName);
       }
-      await supabase.from("members").delete().or(`member_id.eq.${regId},id.eq.mem-${regId}`);
+      if (phone) {
+        await supabase.from("registrations").delete().eq("whatsapp", phone);
+      }
+
+      if (regId) {
+        await supabase.from("members").delete().eq("member_id", regId);
+      }
+      if (dbId) {
+        await supabase.from("members").delete().eq("id", dbId);
+      }
       if (fullName) {
         await supabase.from("members").delete().ilike("full_name", fullName);
       }
-      await supabase.from("attendances").delete().or(`member_id.eq.${regId},member_name.ilike.%${fullName || "none"}%`);
+
+      if (regId) {
+        await supabase.from("attendances").delete().eq("member_id", regId);
+      }
+      if (fullName) {
+        await supabase.from("attendances").delete().ilike("member_name", fullName);
+      }
 
       // Push tombstone
       const currentDeleted = getDeletedMembers();
