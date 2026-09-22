@@ -203,13 +203,12 @@ const getDeletedRegistrations = (): string[] => {
   }
 };
 
-const addDeletedRegistration = (regId?: string, id?: string, phone?: string) => {
+const addDeletedRegistration = (regId?: string, id?: string) => {
   if (typeof window === "undefined") return;
   try {
     const list = getDeletedRegistrations();
     if (regId && regId.trim()) list.push(regId.trim().toLowerCase());
     if (id && id.trim()) list.push(id.trim().toLowerCase());
-    if (phone && phone.replace(/\D/g, "")) list.push(phone.replace(/\D/g, ""));
     const unique = Array.from(new Set(list.filter(Boolean)));
     localStorage.setItem("rkc_deleted_registrations", JSON.stringify(unique));
   } catch (e) {
@@ -226,14 +225,12 @@ const getDeletedMembers = (): string[] => {
   }
 };
 
-const addDeletedMember = (memberId?: string, id?: string, fullName?: string, phone?: string) => {
+const addDeletedMember = (memberId?: string, id?: string) => {
   if (typeof window === "undefined") return;
   try {
     const list = getDeletedMembers();
     if (memberId && memberId.trim()) list.push(memberId.trim().toLowerCase());
     if (id && id.trim()) list.push(id.trim().toLowerCase());
-    if (fullName && fullName.trim()) list.push(fullName.trim().toLowerCase());
-    if (phone && phone.replace(/\D/g, "")) list.push(phone.replace(/\D/g, ""));
     const unique = Array.from(new Set(list.filter(Boolean)));
     localStorage.setItem("rkc_deleted_members", JSON.stringify(unique));
   } catch (e) {
@@ -741,14 +738,10 @@ export default function KuzuAdminPage() {
 
         const regId = (r.reg_id || "").toLowerCase().trim();
         const id = (r.id || "").toLowerCase().trim();
-        const name = (r.full_name || "").toLowerCase().trim();
-        const phone = (r.whatsapp || "").replace(/\D/g, "");
 
         return (
           (regId !== "" && (deletedRegs.includes(regId) || deletedMems.includes(regId))) ||
-          (id !== "" && (deletedRegs.includes(id) || deletedMems.includes(id))) ||
-          (name !== "" && deletedMems.includes(name)) ||
-          (phone !== "" && phone.length >= 8 && (deletedRegs.includes(phone) || deletedMems.includes(phone)))
+          (id !== "" && (deletedRegs.includes(id) || deletedMems.includes(id)))
         );
       };
 
@@ -969,18 +962,13 @@ export default function KuzuAdminPage() {
       const savedOffline = localStorage.getItem("rkc_offline_registrations");
       const offlineList: RegistrationRecord[] = savedOffline ? JSON.parse(savedOffline) : [];
 
-      const isMemberDeleted = (m: MemberRecord | { member_id?: string; id?: string; full_name?: string; phone?: string; whatsapp?: string }) => {
+      const isMemberDeleted = (m: MemberRecord | { member_id?: string; id?: string }) => {
         const id = (m.id || "").toLowerCase().trim();
         const memId = (m.member_id || "").toLowerCase().trim();
-        const name = (m.full_name || "").toLowerCase().trim();
-        const rawPhone = ("phone" in m && m.phone ? m.phone : "whatsapp" in m && (m as any).whatsapp ? (m as any).whatsapp : "") as string;
-        const phone = rawPhone.replace(/\D/g, "");
 
         return (
           (memId !== "" && (deletedMems.includes(memId) || deletedRegs.includes(memId))) ||
-          (id !== "" && (deletedMems.includes(id) || deletedRegs.includes(id))) ||
-          (name !== "" && deletedMems.includes(name)) ||
-          (phone !== "" && phone.length >= 8 && (deletedMems.includes(phone) || deletedRegs.includes(phone)))
+          (id !== "" && (deletedMems.includes(id) || deletedRegs.includes(id)))
         );
       };
 
@@ -1347,8 +1335,8 @@ export default function KuzuAdminPage() {
     const memberPhone = (target.phone || "").trim();
 
     // 1. Save to persistent blacklist (both members & registrations)
-    addDeletedMember(memberId, memberDbId, memberName, memberPhone);
-    if (memberId) addDeletedRegistration(memberId, memberDbId, memberPhone);
+    addDeletedMember(memberId, memberDbId);
+    if (memberId) addDeletedRegistration(memberId, memberDbId);
 
     // 2. Filter out ONLY this member safely from adminMembers
     const isTarget = (m: MemberRecord) => {
@@ -1786,8 +1774,8 @@ export default function KuzuAdminPage() {
     const dbId = targetRecord?.id || "";
 
     // 1. Add to persistent blacklist & remove status override
-    addDeletedRegistration(regId, dbId, phone);
-    addDeletedMember(regId, dbId, fullName, phone);
+    addDeletedRegistration(regId, dbId);
+    addDeletedMember(regId, dbId);
     removeRegistrationStatusOverride(regId, dbId);
 
     // 2. Filter records

@@ -272,18 +272,13 @@ export default function AttendancePortal() {
       const savedOffline = localStorage.getItem("rkc_offline_registrations");
       const offlineList: any[] = savedOffline ? JSON.parse(savedOffline) : [];
 
-      const isMemberDeleted = (m: MemberRecord | { member_id?: string; id?: string; full_name?: string; phone?: string; whatsapp?: string }) => {
+      const isMemberDeleted = (m: { member_id?: string; reg_id?: string; id?: string }) => {
         const id = (m.id || "").toLowerCase().trim();
-        const memId = (m.member_id || "").toLowerCase().trim();
-        const name = (m.full_name || "").toLowerCase().trim();
-        const rawPhone = ("phone" in m && m.phone ? m.phone : "whatsapp" in m && (m as any).whatsapp ? (m as any).whatsapp : "") as string;
-        const phone = rawPhone.replace(/\D/g, "");
+        const memId = (m.member_id || m.reg_id || "").toLowerCase().trim();
 
         return (
           (memId !== "" && (deletedMems.includes(memId) || deletedRegs.includes(memId))) ||
-          (id !== "" && (deletedMems.includes(id) || deletedRegs.includes(id))) ||
-          (name !== "" && deletedMems.includes(name)) ||
-          (phone !== "" && phone.length >= 8 && (deletedMems.includes(phone) || deletedRegs.includes(phone)))
+          (id !== "" && (deletedMems.includes(id) || deletedRegs.includes(id)))
         );
       };
 
