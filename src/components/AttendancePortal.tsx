@@ -272,13 +272,30 @@ export default function AttendancePortal() {
       const savedOffline = localStorage.getItem("rkc_offline_registrations");
       const offlineList: any[] = savedOffline ? JSON.parse(savedOffline) : [];
 
+      const isMemberDeleted = (m: MemberRecord | { member_id?: string; id?: string; full_name?: string; phone?: string; whatsapp?: string }) => {
+        const id = (m.id || "").toLowerCase().trim();
+        const memId = (m.member_id || "").toLowerCase().trim();
+        const name = (m.full_name || "").toLowerCase().trim();
+        const rawPhone = ("phone" in m && m.phone ? m.phone : "whatsapp" in m && (m as any).whatsapp ? (m as any).whatsapp : "") as string;
+        const phone = rawPhone.replace(/\D/g, "");
+
+        return (
+          (memId !== "" && (deletedMems.includes(memId) || deletedRegs.includes(memId))) ||
+          (id !== "" && (deletedMems.includes(id) || deletedRegs.includes(id))) ||
+          (name !== "" && deletedMems.includes(name)) ||
+          (phone !== "" && phone.length >= 8 && (deletedMems.includes(phone) || deletedRegs.includes(phone)))
+        );
+      };
+
       // 1. Gather all approved registrations
       const approvedRegsMap = new Map<string, any>();
 
       offlineList.forEach((r) => {
-        const s = statusMap[r.reg_id] || (r.id ? statusMap[r.id] : undefined) || r.registration_status;
-        if (s === "Diterima") {
-          approvedRegsMap.set(r.reg_id, r);
+        if (!isMemberDeleted(r)) {
+          const s = statusMap[r.reg_id] || (r.id ? statusMap[r.id] : undefined) || r.registration_status;
+          if (s === "Diterima") {
+            approvedRegsMap.set(r.reg_id, r);
+          }
         }
       });
 
@@ -286,7 +303,7 @@ export default function AttendancePortal() {
       try {
         const { data: regMembers, error: regErr } = await supabase
           .from("registrations")
-          .select("reg_id, full_name, whatsapp, gender, status, registration_status, motivation, address, created_at")
+          .select("reg_id, full_name, whatsapp, gender, status, registration_status, motivation, address, age, created_at")
           .eq("registration_status", "Diterima");
 
         if (!regErr && regMembers && regMembers.length > 0) {
@@ -295,7 +312,8 @@ export default function AttendancePortal() {
               r.reg_id !== "SETTINGS-CONFIG" &&
               r.reg_id !== "DELETED_MEMBERS_CONFIG" &&
               r.status !== "ATTENDANCE_RECORD" &&
-              r.status !== "SYSTEM_TOMBSTONE"
+              r.status !== "SYSTEM_TOMBSTONE" &&
+              !isMemberDeleted(r)
             ) {
               approvedRegsMap.set(r.reg_id, r);
             }
@@ -305,35 +323,7 @@ export default function AttendancePortal() {
         console.warn("Supabase registrations error:", err);
       }
 
-      const allApproved = Array.from(approvedRegsMap.values());
-
-      const isMemberDeleted = (m: MemberRecord | { member_id?: string; id?: string; full_name?: string; phone?: string; whatsapp?: string }) => {
-        const id = (m.id || "").toLowerCase().trim();
-        const memId = (m.member_id || "").toLowerCase().trim();
-        const name = (m.full_name || "").toLowerCase().trim();
-        const rawPhone = ("phone" in m && m.phone ? m.phone : "whatsapp" in m && m.whatsapp ? m.whatsapp : "") as string;
-        const phone = rawPhone.replace(/\D/g, "");
-
-        // Approved students are NEVER deleted
-        if (
-          allApproved.some(
-            (a) =>
-              (a.reg_id && a.reg_id.toLowerCase().trim() === memId) ||
-              (a.id && a.id.toLowerCase().trim() === id) ||
-              (a.full_name && a.full_name.toLowerCase().trim() === name) ||
-              (phone && a.whatsapp && a.whatsapp.replace(/\D/g, "") === phone)
-          )
-        ) {
-          return false;
-        }
-
-        return (
-          (memId !== "" && deletedMems.includes(memId)) ||
-          (id !== "" && deletedMems.includes(id)) ||
-          (name !== "" && deletedMems.includes(name)) ||
-          (phone !== "" && phone.length >= 8 && deletedMems.includes(phone))
-        );
-      };
+      const allApproved = Array.from(approvedRegsMap.values()).filter((r) => !isMemberDeleted(r));
 
       const savedMembers = localStorage.getItem("rkc_members_list");
       let localList: MemberRecord[] = savedMembers
@@ -411,29 +401,6 @@ export default function AttendancePortal() {
 
       // Clear selected member if deleted
       setSelectedMember((prev) => (prev && isMemberDeleted(prev) ? null : prev));
-
-      // Sync any active non-deleted local members to Supabase so all other browsers/devices receive them immediately
-      for (const m of finalList) {
-        if (m.member_id && m.full_name && !isMemberDeleted(m)) {
-          try {
-            await supabase.from("registrations").upsert(
-              {
-                reg_id: m.member_id,
-                full_name: m.full_name,
-                gender: m.gender || "Laki-laki",
-                whatsapp: m.phone || "-",
-                status: "Fix",
-                registration_status: "Diterima",
-                motivation: m.belt_level || "Sabuk Putih (Kyu 10)",
-                birth_date: "2000-01-01",
-                age: "20",
-                address: m.dojo_branch || "Racing Kyokushin Club",
-              },
-              { onConflict: "reg_id" }
-            );
-          } catch { }
-        }
-      }
     } catch (e) {
       console.warn("Error loading members:", e);
     }

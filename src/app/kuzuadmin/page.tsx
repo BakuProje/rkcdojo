@@ -724,6 +724,7 @@ export default function KuzuAdminPage() {
     setRefreshing(true);
     try {
       const deletedRegs = getDeletedRegistrations();
+      const deletedMems = getDeletedMembers();
       const statusOverrides = getRegistrationStatusOverrides();
 
       const isDeleted = (r: RegistrationRecord) => {
@@ -740,10 +741,14 @@ export default function KuzuAdminPage() {
 
         const regId = (r.reg_id || "").toLowerCase().trim();
         const id = (r.id || "").toLowerCase().trim();
+        const name = (r.full_name || "").toLowerCase().trim();
+        const phone = (r.whatsapp || "").replace(/\D/g, "");
 
         return (
-          (regId !== "" && deletedRegs.includes(regId)) ||
-          (id !== "" && deletedRegs.includes(id))
+          (regId !== "" && (deletedRegs.includes(regId) || deletedMems.includes(regId))) ||
+          (id !== "" && (deletedRegs.includes(id) || deletedMems.includes(id))) ||
+          (name !== "" && deletedMems.includes(name)) ||
+          (phone !== "" && phone.length >= 8 && (deletedRegs.includes(phone) || deletedMems.includes(phone)))
         );
       };
 
@@ -964,17 +969,36 @@ export default function KuzuAdminPage() {
       const savedOffline = localStorage.getItem("rkc_offline_registrations");
       const offlineList: RegistrationRecord[] = savedOffline ? JSON.parse(savedOffline) : [];
 
+      const isMemberDeleted = (m: MemberRecord | { member_id?: string; id?: string; full_name?: string; phone?: string; whatsapp?: string }) => {
+        const id = (m.id || "").toLowerCase().trim();
+        const memId = (m.member_id || "").toLowerCase().trim();
+        const name = (m.full_name || "").toLowerCase().trim();
+        const rawPhone = ("phone" in m && m.phone ? m.phone : "whatsapp" in m && (m as any).whatsapp ? (m as any).whatsapp : "") as string;
+        const phone = rawPhone.replace(/\D/g, "");
+
+        return (
+          (memId !== "" && (deletedMems.includes(memId) || deletedRegs.includes(memId))) ||
+          (id !== "" && (deletedMems.includes(id) || deletedRegs.includes(id))) ||
+          (name !== "" && deletedMems.includes(name)) ||
+          (phone !== "" && phone.length >= 8 && (deletedMems.includes(phone) || deletedRegs.includes(phone)))
+        );
+      };
+
       // 1. Gather all approved registrations across state & storage
       const approvedRegsMap = new Map<string, RegistrationRecord>();
 
       // From records state
-      records.filter((r) => r.registration_status === "Diterima").forEach((r) => approvedRegsMap.set(r.reg_id, r));
+      records
+        .filter((r) => r.registration_status === "Diterima" && !isMemberDeleted(r))
+        .forEach((r) => approvedRegsMap.set(r.reg_id, r));
 
       // From offlineList and statusOverrides
       offlineList.forEach((r) => {
-        const s = statusOverrides[r.reg_id] || (r.id ? statusOverrides[r.id] : undefined) || r.registration_status;
-        if (s === "Diterima") {
-          approvedRegsMap.set(r.reg_id, r);
+        if (!isMemberDeleted(r)) {
+          const s = statusOverrides[r.reg_id] || (r.id ? statusOverrides[r.id] : undefined) || r.registration_status;
+          if (s === "Diterima") {
+            approvedRegsMap.set(r.reg_id, r);
+          }
         }
       });
 
@@ -991,7 +1015,8 @@ export default function KuzuAdminPage() {
               r.reg_id !== "SETTINGS-CONFIG" &&
               r.reg_id !== "DELETED_MEMBERS_CONFIG" &&
               r.status !== "ATTENDANCE_RECORD" &&
-              r.status !== "SYSTEM_TOMBSTONE"
+              r.status !== "SYSTEM_TOMBSTONE" &&
+              !isMemberDeleted(r)
             ) {
               approvedRegsMap.set(r.reg_id, r);
             }
@@ -1001,60 +1026,7 @@ export default function KuzuAdminPage() {
         console.warn("Fetch Supabase registrations error:", err);
       }
 
-      const allApprovedList = Array.from(approvedRegsMap.values());
-
-      // 3. Clear all approved students from deleted blacklists
-      let cleanDeletedMems = [...deletedMems];
-      let cleanDeletedRegs = [...deletedRegs];
-      let blacklistChanged = false;
-
-      allApprovedList.forEach((r) => {
-        const regId = (r.reg_id || "").toLowerCase().trim();
-        const id = (r.id || "").toLowerCase().trim();
-        const name = (r.full_name || "").toLowerCase().trim();
-        const phone = (r.whatsapp || "").replace(/\D/g, "");
-
-        if (cleanDeletedMems.includes(regId) || cleanDeletedMems.includes(id) || cleanDeletedMems.includes(name) || (phone && cleanDeletedMems.includes(phone))) {
-          cleanDeletedMems = cleanDeletedMems.filter((d) => d !== regId && d !== id && d !== name && d !== phone);
-          blacklistChanged = true;
-        }
-        if (cleanDeletedRegs.includes(regId) || cleanDeletedRegs.includes(id) || (phone && cleanDeletedRegs.includes(phone))) {
-          cleanDeletedRegs = cleanDeletedRegs.filter((d) => d !== regId && d !== id && d !== phone);
-          blacklistChanged = true;
-        }
-      });
-
-      if (blacklistChanged) {
-        localStorage.setItem("rkc_deleted_members", JSON.stringify(cleanDeletedMems));
-        localStorage.setItem("rkc_deleted_registrations", JSON.stringify(cleanDeletedRegs));
-      }
-
-      const isMemberDeleted = (m: MemberRecord | { member_id?: string; id?: string; full_name?: string; phone?: string }) => {
-        const id = (m.id || "").toLowerCase().trim();
-        const memId = (m.member_id || "").toLowerCase().trim();
-        const name = (m.full_name || "").toLowerCase().trim();
-        const phone = (m.phone || "").replace(/\D/g, "");
-
-        // Approved active students are NEVER deleted
-        if (
-          allApprovedList.some(
-            (a) =>
-              (a.reg_id && a.reg_id.toLowerCase().trim() === memId) ||
-              (a.id && a.id.toLowerCase().trim() === id) ||
-              (a.full_name && a.full_name.toLowerCase().trim() === name) ||
-              (phone && a.whatsapp && a.whatsapp.replace(/\D/g, "") === phone)
-          )
-        ) {
-          return false;
-        }
-
-        return (
-          (memId !== "" && cleanDeletedMems.includes(memId)) ||
-          (id !== "" && cleanDeletedMems.includes(id)) ||
-          (name !== "" && cleanDeletedMems.includes(name)) ||
-          (phone !== "" && phone.length >= 8 && cleanDeletedMems.includes(phone))
-        );
-      };
+      const allApprovedList = Array.from(approvedRegsMap.values()).filter((r) => !isMemberDeleted(r));
 
       const saved = localStorage.getItem("rkc_members_list");
       let list: MemberRecord[] = saved
@@ -1076,7 +1048,7 @@ export default function KuzuAdminPage() {
         }
       });
 
-      // 4. Auto-enroll ALL approved registrations into Master Anggota list
+      // 3. Auto-enroll ALL non-deleted approved registrations into Master Anggota list
       allApprovedList.forEach((r) => {
         const exists = list.some(
           (m) =>
@@ -1117,30 +1089,6 @@ export default function KuzuAdminPage() {
       const finalList = list.filter((m) => !isMemberDeleted(m));
       setAdminMembers(finalList);
       localStorage.setItem("rkc_members_list", JSON.stringify(finalList));
-
-      // 5. Sync active members to Supabase members & registrations tables
-      for (const m of finalList) {
-        if (m.member_id && m.full_name) {
-          try {
-            await supabase.from("members").upsert(m);
-            await supabase.from("registrations").upsert(
-              {
-                reg_id: m.member_id,
-                full_name: m.full_name,
-                gender: m.gender || "Laki-laki",
-                whatsapp: m.phone || "-",
-                status: "Fix",
-                registration_status: "Diterima",
-                motivation: m.belt_level || "Sabuk Putih (Kyu 10)",
-                birth_date: "2000-01-01",
-                age: "20",
-                address: m.dojo_branch || "Racing Kyokushin Club",
-              },
-              { onConflict: "reg_id" }
-            );
-          } catch {}
-        }
-      }
     } catch (e) {
       console.warn("Fetch members error:", e);
       const deletedMems = getDeletedMembers();
