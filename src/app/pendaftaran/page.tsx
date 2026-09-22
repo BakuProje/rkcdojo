@@ -41,8 +41,8 @@ export default function PendaftaranPage() {
         </div>
 
         {/* Right Column (50% on Desktop / Full on Mobile): Form Container */}
-        <div className="w-full h-full relative flex items-center justify-center p-3 sm:p-5 md:p-8 lg:p-8 xl:p-10 overflow-y-auto no-scrollbar">
-          <div className="w-full max-w-[580px] my-auto py-2 sm:py-6">
+        <div className="w-full h-full relative flex items-start lg:items-center justify-center p-3 sm:p-5 md:p-8 lg:p-8 xl:p-10 overflow-y-auto no-scrollbar pt-1.5 sm:pt-4">
+          <div className="w-full max-w-[580px] my-0 lg:my-auto py-0 sm:py-3">
             <RegistrationForm />
           </div>
         </div>
