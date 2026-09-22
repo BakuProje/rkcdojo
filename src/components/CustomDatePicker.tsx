@@ -286,28 +286,31 @@ export default function CustomDatePicker({
               boxShadow: "0 10px 30px -5px rgba(220, 38, 38, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.05)",
             }}
           >
-            {/* 1. Quick Presets Bar (Without "Kategori:" text) */}
+            {/* 1. Quick Presets Bar (2-Baris Rapi: Nama Kategori & Rentang Usia) */}
             <div className="grid grid-cols-3 gap-1.5 pb-2 border-b border-white/10">
               <button
                 type="button"
                 onClick={() => handleCategoryPreset("kids")}
-                className="py-1 px-1 rounded-lg text-[10.5px] font-bold text-center bg-white/5 hover:bg-red-600/25 hover:text-red-300 border border-white/5 hover:border-red-500/30 text-gray-300 transition-all cursor-pointer"
+                className="py-1.5 px-1 rounded-xl text-center bg-white/5 hover:bg-red-600/25 hover:text-red-300 border border-white/5 hover:border-red-500/30 text-gray-300 transition-all cursor-pointer flex flex-col items-center justify-center gap-0.5 group"
               >
-                Anak (6-12)
+                <span className="text-[11px] font-bold tracking-wide group-hover:text-white">Anak</span>
+                <span className="text-[9.5px] font-medium text-gray-400 group-hover:text-red-300/90">(6-12)</span>
               </button>
               <button
                 type="button"
                 onClick={() => handleCategoryPreset("teens")}
-                className="py-1 px-1 rounded-lg text-[10.5px] font-bold text-center bg-white/5 hover:bg-red-600/25 hover:text-red-300 border border-white/5 hover:border-red-500/30 text-gray-300 transition-all cursor-pointer"
+                className="py-1.5 px-1 rounded-xl text-center bg-white/5 hover:bg-red-600/25 hover:text-red-300 border border-white/5 hover:border-red-500/30 text-gray-300 transition-all cursor-pointer flex flex-col items-center justify-center gap-0.5 group"
               >
-                Remaja (13-17)
+                <span className="text-[11px] font-bold tracking-wide group-hover:text-white">Remaja</span>
+                <span className="text-[9.5px] font-medium text-gray-400 group-hover:text-red-300/90">(13-17)</span>
               </button>
               <button
                 type="button"
                 onClick={() => handleCategoryPreset("adults")}
-                className="py-1 px-1 rounded-lg text-[10.5px] font-bold text-center bg-white/5 hover:bg-red-600/25 hover:text-red-300 border border-white/5 hover:border-red-500/30 text-gray-300 transition-all cursor-pointer"
+                className="py-1.5 px-1 rounded-xl text-center bg-white/5 hover:bg-red-600/25 hover:text-red-300 border border-white/5 hover:border-red-500/30 text-gray-300 transition-all cursor-pointer flex flex-col items-center justify-center gap-0.5 group"
               >
-                Dewasa (18+)
+                <span className="text-[11px] font-bold tracking-wide group-hover:text-white">Dewasa</span>
+                <span className="text-[9.5px] font-medium text-gray-400 group-hover:text-red-300/90">(18+)</span>
               </button>
             </div>
 
