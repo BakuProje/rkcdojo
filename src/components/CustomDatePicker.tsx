@@ -197,14 +197,13 @@ export default function CustomDatePicker({
   const firstDayIndex = new Date(currentYear, currentMonth, 1).getDay(); // 0 = Minggu
   const prevMonthDays = new Date(currentYear, currentMonth, 0).getDate();
 
-  // Formatted display text
+  // Formatted display text (DD-MM-YYYY format, e.g. 13-09-2006)
   const displayFormattedDate = useMemo(() => {
     if (!parsedValue) return "";
-    const day = parsedValue.getDate();
-    const monthName = MONTH_SHORT_ID[parsedValue.getMonth()];
+    const day = String(parsedValue.getDate()).padStart(2, "0");
+    const month = String(parsedValue.getMonth() + 1).padStart(2, "0");
     const year = parsedValue.getFullYear();
-    const age = calculateAge(parsedValue);
-    return `${day} ${monthName} ${year} (${age} th)`;
+    return `${day}-${month}-${year}`;
   }, [parsedValue]);
 
   // List of all selectable years (Newest to Oldest)
@@ -248,7 +247,7 @@ export default function CustomDatePicker({
         </div>
 
         {/* Text */}
-        <span className={`truncate font-medium ${parsedValue ? "text-white" : "text-gray-500"}`}>
+        <span className={`truncate font-medium ${parsedValue ? "text-white font-mono" : "text-gray-500"}`}>
           {displayFormattedDate || placeholder}
         </span>
 
@@ -287,34 +286,29 @@ export default function CustomDatePicker({
               boxShadow: "0 10px 30px -5px rgba(220, 38, 38, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.05)",
             }}
           >
-            {/* 1. Quick Category Presets Bar */}
-            <div className="flex items-center justify-between gap-1 pb-2 border-b border-white/10">
-              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider pl-1">
-                Kategori:
-              </span>
-              <div className="flex items-center gap-1">
-                <button
-                  type="button"
-                  onClick={() => handleCategoryPreset("kids")}
-                  className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-white/5 hover:bg-red-600/20 hover:text-red-300 border border-white/5 hover:border-red-500/30 text-gray-300 transition-colors cursor-pointer"
-                >
-                  Anak (6-12)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleCategoryPreset("teens")}
-                  className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-white/5 hover:bg-red-600/20 hover:text-red-300 border border-white/5 hover:border-red-500/30 text-gray-300 transition-colors cursor-pointer"
-                >
-                  Remaja (13-17)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleCategoryPreset("adults")}
-                  className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-white/5 hover:bg-red-600/20 hover:text-red-300 border border-white/5 hover:border-red-500/30 text-gray-300 transition-colors cursor-pointer"
-                >
-                  Dewasa (18+)
-                </button>
-              </div>
+            {/* 1. Quick Presets Bar (Without "Kategori:" text) */}
+            <div className="grid grid-cols-3 gap-1.5 pb-2 border-b border-white/10">
+              <button
+                type="button"
+                onClick={() => handleCategoryPreset("kids")}
+                className="py-1 px-1 rounded-lg text-[10.5px] font-bold text-center bg-white/5 hover:bg-red-600/25 hover:text-red-300 border border-white/5 hover:border-red-500/30 text-gray-300 transition-all cursor-pointer"
+              >
+                Anak (6-12)
+              </button>
+              <button
+                type="button"
+                onClick={() => handleCategoryPreset("teens")}
+                className="py-1 px-1 rounded-lg text-[10.5px] font-bold text-center bg-white/5 hover:bg-red-600/25 hover:text-red-300 border border-white/5 hover:border-red-500/30 text-gray-300 transition-all cursor-pointer"
+              >
+                Remaja (13-17)
+              </button>
+              <button
+                type="button"
+                onClick={() => handleCategoryPreset("adults")}
+                className="py-1 px-1 rounded-lg text-[10.5px] font-bold text-center bg-white/5 hover:bg-red-600/25 hover:text-red-300 border border-white/5 hover:border-red-500/30 text-gray-300 transition-all cursor-pointer"
+              >
+                Dewasa (18+)
+              </button>
             </div>
 
             {/* 2. Header: Month & Year Selector + Arrows */}
@@ -492,11 +486,11 @@ export default function CustomDatePicker({
               </div>
             )}
 
-            {/* 4. Footer info bar with auto-computed age */}
+            {/* 4. Footer info bar */}
             {parsedValue && (
               <div className="pt-2 border-t border-white/10 flex items-center justify-between text-[11px] text-gray-400">
-                <span className="text-gray-300 font-mono">
-                  Umur: <strong className="text-red-400 font-bold">{calculateAge(parsedValue)} Tahun</strong>
+                <span className="text-gray-300 font-mono font-bold tracking-wider">
+                  {displayFormattedDate}
                 </span>
                 <span className="text-emerald-400 font-semibold flex items-center gap-1 text-[10px]">
                   <Check className="w-3 h-3" /> Tanggal Terpilih
