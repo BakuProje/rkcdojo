@@ -958,9 +958,9 @@ export default function KuzuAdminPage() {
               const mergedDeleted = Array.from(new Set([...localDeleted, ...remoteDeleted]));
               localStorage.setItem("rkc_deleted_members", JSON.stringify(mergedDeleted));
             }
-          } catch {}
+          } catch { }
         }
-      } catch {}
+      } catch { }
 
       const deletedMems = getDeletedMembers();
       const deletedRegs = getDeletedRegistrations();
@@ -1084,7 +1084,7 @@ export default function KuzuAdminPage() {
               }
             });
         }
-      } catch {}
+      } catch { }
 
       const finalList = list.filter((m) => !isMemberDeleted(m));
       setAdminMembers(finalList);
@@ -1115,7 +1115,7 @@ export default function KuzuAdminPage() {
           setAttendanceSettings(data as AttendanceSettings);
           localStorage.setItem("rkc_attendance_settings", JSON.stringify(data));
         }
-      } catch {}
+      } catch { }
 
       // Fallback check from registrations table for cross-browser sync
       try {
@@ -1132,7 +1132,7 @@ export default function KuzuAdminPage() {
             localStorage.setItem("rkc_attendance_settings", JSON.stringify(parsed));
           }
         }
-      } catch {}
+      } catch { }
     } catch (e) {
       console.warn("Fetch settings error:", e);
     }
@@ -1196,7 +1196,7 @@ export default function KuzuAdminPage() {
           ...attendanceSettings,
           id: attendanceSettings.id || "default_settings",
         });
-      } catch {}
+      } catch { }
 
       // Universal cloud fallback in registrations table so all browsers receive it
       try {
@@ -1215,7 +1215,7 @@ export default function KuzuAdminPage() {
           },
           { onConflict: "reg_id" }
         );
-      } catch {}
+      } catch { }
 
       setSettingsSavedMessage("Pengaturan absensi & radius 50m berhasil disimpan!");
       setTimeout(() => setSettingsSavedMessage(null), 4000);
@@ -1297,7 +1297,7 @@ export default function KuzuAdminPage() {
       const name = (memberToSave.full_name || "").toLowerCase().trim();
       const filtered = del.filter((d) => d !== memId && d !== id && d !== name);
       localStorage.setItem("rkc_deleted_members", JSON.stringify(filtered));
-    } catch {}
+    } catch { }
 
     try {
       await supabase.from("members").upsert(memberToSave);
@@ -2982,7 +2982,7 @@ export default function KuzuAdminPage() {
                     : "text-gray-400 hover:text-white"
                     }`}
                 >
-                  Radius (50m)
+                  Radius
                 </button>
               </div>
             </div>
@@ -3573,7 +3573,7 @@ export default function KuzuAdminPage() {
                       title="Impor dari pendaftar yang berstatus Diterima"
                     >
                       <Download className="w-4 h-4 text-amber-400" />
-                      <span>Tarik dari Pendaftar Diterima</span>
+                      <span>Tarik Pendaftar</span>
                     </button>
 
                     <button
