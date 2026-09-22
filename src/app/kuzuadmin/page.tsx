@@ -386,11 +386,34 @@ export default function KuzuAdminPage() {
     try {
       const saved = localStorage.getItem("rkc_members_list");
       const deletedMems = getDeletedMembers();
+      const statusOverrides = getRegistrationStatusOverrides();
+      const savedOffline = localStorage.getItem("rkc_offline_registrations");
+      const offlineList: RegistrationRecord[] = savedOffline ? JSON.parse(savedOffline) : [];
+
+      // Whitelist approved registrations
+      const approvedRegs = offlineList.filter((r) => {
+        const s = statusOverrides[r.reg_id] || (r.id ? statusOverrides[r.id] : undefined) || r.registration_status;
+        return s === "Diterima";
+      });
+
       const isDeleted = (m: MemberRecord) => {
         const id = (m.id || "").toLowerCase().trim();
         const memId = (m.member_id || "").toLowerCase().trim();
         const name = (m.full_name || "").toLowerCase().trim();
         const phone = (m.phone || "").replace(/\D/g, "");
+
+        if (
+          approvedRegs.some(
+            (a) =>
+              (a.reg_id && a.reg_id.toLowerCase().trim() === memId) ||
+              (a.id && a.id.toLowerCase().trim() === id) ||
+              (a.full_name && a.full_name.toLowerCase().trim() === name) ||
+              (phone && a.whatsapp && a.whatsapp.replace(/\D/g, "") === phone)
+          )
+        ) {
+          return false;
+        }
+
         return (
           (memId !== "" && deletedMems.includes(memId)) ||
           (id !== "" && deletedMems.includes(id)) ||
@@ -399,10 +422,34 @@ export default function KuzuAdminPage() {
         );
       };
 
-      if (saved) {
-        return JSON.parse(saved).filter((m: MemberRecord) => !isDeleted(m));
-      }
-      return INITIAL_MEMBERS_DATA.filter((m) => !isDeleted(m));
+      let list: MemberRecord[] = saved
+        ? JSON.parse(saved).filter((m: MemberRecord) => !isDeleted(m))
+        : [...INITIAL_MEMBERS_DATA].filter((m) => !isDeleted(m));
+
+      // Auto-enroll all approved registrations
+      approvedRegs.forEach((r) => {
+        const exists = list.some(
+          (m) =>
+            (m.member_id && r.reg_id && m.member_id.toLowerCase() === r.reg_id.toLowerCase()) ||
+            (m.full_name && r.full_name && m.full_name.toLowerCase().trim() === r.full_name.toLowerCase().trim()) ||
+            (r.whatsapp && m.phone === r.whatsapp)
+        );
+        if (!exists) {
+          list.push({
+            id: `mem-${r.reg_id}`,
+            member_id: r.reg_id,
+            full_name: r.full_name.trim(),
+            belt_level: r.motivation && r.motivation.includes("Sabuk") ? r.motivation : "Sabuk Putih (Kyu 10)",
+            phone: r.whatsapp,
+            dojo_branch: r.address || "Racing Kyokushin Club",
+            gender: r.gender as any,
+            is_active: true,
+            joined_date: r.created_at ? r.created_at.split("T")[0] : new Date().toISOString().split("T")[0],
+          });
+        }
+      });
+
+      return list.filter((m) => !isDeleted(m));
     } catch {
       return INITIAL_MEMBERS_DATA;
     }
@@ -911,17 +958,100 @@ export default function KuzuAdminPage() {
 
       const deletedMems = getDeletedMembers();
       const deletedRegs = getDeletedRegistrations();
+      const statusOverrides = getRegistrationStatusOverrides();
+
+      const savedOffline = localStorage.getItem("rkc_offline_registrations");
+      const offlineList: RegistrationRecord[] = savedOffline ? JSON.parse(savedOffline) : [];
+
+      // 1. Gather all approved registrations across state & storage
+      const approvedRegsMap = new Map<string, RegistrationRecord>();
+
+      // From records state
+      records.filter((r) => r.registration_status === "Diterima").forEach((r) => approvedRegsMap.set(r.reg_id, r));
+
+      // From offlineList and statusOverrides
+      offlineList.forEach((r) => {
+        const s = statusOverrides[r.reg_id] || (r.id ? statusOverrides[r.id] : undefined) || r.registration_status;
+        if (s === "Diterima") {
+          approvedRegsMap.set(r.reg_id, r);
+        }
+      });
+
+      // 2. Fetch approved registrations from Supabase
+      try {
+        const { data: regData } = await supabase
+          .from("registrations")
+          .select("*")
+          .eq("registration_status", "Diterima");
+
+        if (regData && regData.length > 0) {
+          regData.forEach((r) => {
+            if (
+              r.reg_id !== "SETTINGS-CONFIG" &&
+              r.reg_id !== "DELETED_MEMBERS_CONFIG" &&
+              r.status !== "ATTENDANCE_RECORD" &&
+              r.status !== "SYSTEM_TOMBSTONE"
+            ) {
+              approvedRegsMap.set(r.reg_id, r);
+            }
+          });
+        }
+      } catch (err) {
+        console.warn("Fetch Supabase registrations error:", err);
+      }
+
+      const allApprovedList = Array.from(approvedRegsMap.values());
+
+      // 3. Clear all approved students from deleted blacklists
+      let cleanDeletedMems = [...deletedMems];
+      let cleanDeletedRegs = [...deletedRegs];
+      let blacklistChanged = false;
+
+      allApprovedList.forEach((r) => {
+        const regId = (r.reg_id || "").toLowerCase().trim();
+        const id = (r.id || "").toLowerCase().trim();
+        const name = (r.full_name || "").toLowerCase().trim();
+        const phone = (r.whatsapp || "").replace(/\D/g, "");
+
+        if (cleanDeletedMems.includes(regId) || cleanDeletedMems.includes(id) || cleanDeletedMems.includes(name) || (phone && cleanDeletedMems.includes(phone))) {
+          cleanDeletedMems = cleanDeletedMems.filter((d) => d !== regId && d !== id && d !== name && d !== phone);
+          blacklistChanged = true;
+        }
+        if (cleanDeletedRegs.includes(regId) || cleanDeletedRegs.includes(id) || (phone && cleanDeletedRegs.includes(phone))) {
+          cleanDeletedRegs = cleanDeletedRegs.filter((d) => d !== regId && d !== id && d !== phone);
+          blacklistChanged = true;
+        }
+      });
+
+      if (blacklistChanged) {
+        localStorage.setItem("rkc_deleted_members", JSON.stringify(cleanDeletedMems));
+        localStorage.setItem("rkc_deleted_registrations", JSON.stringify(cleanDeletedRegs));
+      }
 
       const isMemberDeleted = (m: MemberRecord | { member_id?: string; id?: string; full_name?: string; phone?: string }) => {
         const id = (m.id || "").toLowerCase().trim();
         const memId = (m.member_id || "").toLowerCase().trim();
         const name = (m.full_name || "").toLowerCase().trim();
         const phone = (m.phone || "").replace(/\D/g, "");
+
+        // Approved active students are NEVER deleted
+        if (
+          allApprovedList.some(
+            (a) =>
+              (a.reg_id && a.reg_id.toLowerCase().trim() === memId) ||
+              (a.id && a.id.toLowerCase().trim() === id) ||
+              (a.full_name && a.full_name.toLowerCase().trim() === name) ||
+              (phone && a.whatsapp && a.whatsapp.replace(/\D/g, "") === phone)
+          )
+        ) {
+          return false;
+        }
+
         return (
-          (memId !== "" && deletedMems.includes(memId)) ||
-          (id !== "" && deletedMems.includes(id)) ||
-          (name !== "" && deletedMems.includes(name)) ||
-          (phone !== "" && phone.length >= 8 && deletedMems.includes(phone))
+          (memId !== "" && cleanDeletedMems.includes(memId)) ||
+          (id !== "" && cleanDeletedMems.includes(id)) ||
+          (name !== "" && cleanDeletedMems.includes(name)) ||
+          (phone !== "" && phone.length >= 8 && cleanDeletedMems.includes(phone))
         );
       };
 
@@ -930,7 +1060,7 @@ export default function KuzuAdminPage() {
         ? JSON.parse(saved).filter((m: MemberRecord) => !isMemberDeleted(m))
         : [...INITIAL_MEMBERS_DATA].filter((m) => !isMemberDeleted(m));
 
-      // Ensure initial members exist UNLESS deleted
+      // Ensure initial senior members exist UNLESS explicitly deleted
       INITIAL_MEMBERS_DATA.forEach((initM) => {
         if (
           !isMemberDeleted(initM) &&
@@ -945,84 +1075,34 @@ export default function KuzuAdminPage() {
         }
       });
 
-      // Fetch approved registrations from Supabase
-      try {
-        const { data: regData } = await supabase
-          .from("registrations")
-          .select("*")
-          .eq("registration_status", "Diterima");
-
-        if (regData && regData.length > 0) {
-          regData
-            .filter(
-              (r) =>
-                !deletedRegs.includes(r.reg_id) &&
-                !isMemberDeleted({ member_id: r.reg_id, full_name: r.full_name, phone: r.whatsapp })
-            )
-            .forEach((r) => {
-              if (
-                !list.some(
-                  (m) =>
-                    (m.full_name && r.full_name && m.full_name.toLowerCase().trim() === r.full_name.toLowerCase().trim()) ||
-                    (r.whatsapp && m.phone === r.whatsapp) ||
-                    (r.reg_id && m.member_id === r.reg_id)
-                )
-              ) {
-                list.push({
-                  id: `mem-${r.reg_id}`,
-                  member_id: r.reg_id,
-                  full_name: r.full_name,
-                  belt_level: r.motivation && r.motivation.includes("Sabuk") ? r.motivation : "Sabuk Putih (Kyu 10)",
-                  phone: r.whatsapp,
-                  dojo_branch: r.address || "Racing Kyokushin Club",
-                  gender: r.gender as any,
-                  is_active: true,
-                  joined_date: r.created_at ? r.created_at.split("T")[0] : undefined,
-                });
-              }
-            });
+      // 4. Auto-enroll ALL approved registrations into Master Anggota list
+      allApprovedList.forEach((r) => {
+        const exists = list.some(
+          (m) =>
+            (m.member_id && r.reg_id && m.member_id.toLowerCase() === r.reg_id.toLowerCase()) ||
+            (m.full_name && r.full_name && m.full_name.toLowerCase().trim() === r.full_name.toLowerCase().trim()) ||
+            (r.whatsapp && m.phone === r.whatsapp)
+        );
+        if (!exists) {
+          list.push({
+            id: `mem-${r.reg_id}`,
+            member_id: r.reg_id,
+            full_name: r.full_name.trim(),
+            belt_level: r.motivation && r.motivation.includes("Sabuk") ? r.motivation : "Sabuk Putih (Kyu 10)",
+            phone: r.whatsapp,
+            dojo_branch: r.address || "Racing Kyokushin Club",
+            gender: r.gender as any,
+            is_active: true,
+            joined_date: r.created_at ? r.created_at.split("T")[0] : new Date().toISOString().split("T")[0],
+          });
         }
-      } catch (err) {
-        console.warn("Fetch Supabase registrations error:", err);
-      }
+      });
 
-      // Merge registrations that have been accepted offline UNLESS deleted
-      const savedOffline = localStorage.getItem("rkc_offline_registrations");
-      const offlineList: RegistrationRecord[] = savedOffline ? JSON.parse(savedOffline) : [];
-      offlineList
-        .filter(
-          (r) =>
-            r.registration_status === "Diterima" &&
-            !deletedRegs.includes(r.reg_id) &&
-            !isMemberDeleted({ member_id: r.reg_id, full_name: r.full_name, phone: r.whatsapp })
-        )
-        .forEach((r) => {
-          if (
-            !list.some(
-              (m) =>
-                (m.full_name && r.full_name && m.full_name.toLowerCase().trim() === r.full_name.toLowerCase().trim()) ||
-                (r.whatsapp && m.phone === r.whatsapp) ||
-                (r.reg_id && m.member_id === r.reg_id)
-            )
-          ) {
-            list.push({
-              id: `mem-${r.reg_id}`,
-              member_id: r.reg_id,
-              full_name: r.full_name,
-              belt_level: "Sabuk Putih (Kyu 10)",
-              phone: r.whatsapp,
-              dojo_branch: "Racing Kyokushin Club",
-              gender: r.gender as any,
-              is_active: true,
-              joined_date: r.created_at ? r.created_at.split("T")[0] : undefined,
-            });
-          }
-        });
-
+      // Fetch from Supabase members table
       try {
-        const { data } = await supabase.from("members").select("*").order("full_name");
-        if (data && data.length > 0) {
-          data
+        const { data: dbMembers } = await supabase.from("members").select("*").order("full_name");
+        if (dbMembers && dbMembers.length > 0) {
+          dbMembers
             .filter((dbM: MemberRecord) => !isMemberDeleted(dbM))
             .forEach((dbM: MemberRecord) => {
               if (!list.some((m) => (dbM.member_id && m.member_id === dbM.member_id) || (dbM.id && m.id === dbM.id))) {
@@ -1036,10 +1116,11 @@ export default function KuzuAdminPage() {
       setAdminMembers(finalList);
       localStorage.setItem("rkc_members_list", JSON.stringify(finalList));
 
-      // Push active members to Supabase registrations so all other browsers/devices receive the data
+      // 5. Sync active members to Supabase members & registrations tables
       for (const m of finalList) {
         if (m.member_id && m.full_name) {
           try {
+            await supabase.from("members").upsert(m);
             await supabase.from("registrations").upsert(
               {
                 reg_id: m.member_id,
@@ -1434,7 +1515,13 @@ export default function KuzuAdminPage() {
 
   // Import accepted applicants to members
   const handleImportAcceptedApplicants = () => {
-    const accepted = records.filter((r) => r.registration_status === "Diterima");
+    const statusOverrides = getRegistrationStatusOverrides();
+    const accepted = records.filter(
+      (r) =>
+        r.registration_status === "Diterima" ||
+        statusOverrides[r.reg_id] === "Diterima" ||
+        (r.id ? statusOverrides[r.id] === "Diterima" : false)
+    );
     if (accepted.length === 0) {
       showAlert(
         "Pendaftar Diterima Kosong",
@@ -1447,23 +1534,38 @@ export default function KuzuAdminPage() {
     let addedCount = 0;
     const updated = [...adminMembers];
 
-    accepted.forEach((a, idx) => {
+    accepted.forEach((a) => {
+      // Unblacklist
+      const cleanMems = getDeletedMembers().filter(
+        (d) =>
+          d !== a.reg_id.toLowerCase() &&
+          d !== (a.id || "").toLowerCase() &&
+          d !== a.full_name.toLowerCase().trim() &&
+          (a.whatsapp ? d !== a.whatsapp.replace(/\D/g, "") : true)
+      );
+      localStorage.setItem("rkc_deleted_members", JSON.stringify(cleanMems));
+
       const alreadyExists = updated.some(
-        (m) => m.full_name.toLowerCase() === a.full_name.toLowerCase() || m.phone === a.whatsapp
+        (m) =>
+          (m.member_id && m.member_id.toLowerCase() === a.reg_id.toLowerCase()) ||
+          (m.full_name && a.full_name && m.full_name.toLowerCase().trim() === a.full_name.toLowerCase().trim()) ||
+          (a.whatsapp && m.phone === a.whatsapp)
       );
       if (!alreadyExists) {
-        updated.push({
-          id: `mem-reg-${Date.now()}-${idx}`,
-          member_id: `RKC-${Math.floor(200 + Math.random() * 800)}`,
-          full_name: a.full_name,
-          belt_level: "Sabuk Putih (Kyu 10)",
+        const newM: MemberRecord = {
+          id: `mem-${a.reg_id}`,
+          member_id: a.reg_id,
+          full_name: a.full_name.trim(),
+          belt_level: a.motivation && a.motivation.includes("Sabuk") ? a.motivation : "Sabuk Putih (Kyu 10)",
           phone: a.whatsapp,
-          dojo_branch: "Racing Kyokushin Club",
+          dojo_branch: a.address || "Racing Kyokushin Club",
           gender: a.gender as any,
           is_active: true,
-          joined_date: new Date().toISOString().split("T")[0],
-        });
+          joined_date: a.created_at ? a.created_at.split("T")[0] : new Date().toISOString().split("T")[0],
+        };
+        updated.push(newM);
         addedCount++;
+        supabase.from("members").upsert(newM).then();
       }
     });
 
@@ -1473,7 +1575,7 @@ export default function KuzuAdminPage() {
     if (addedCount > 0) {
       showAlert(
         "Impor Anggota Berhasil",
-        `Berhasil mengimpor ${addedCount} anggota baru dari calon murid yang berstatus Diterima ke Master Anggota & Absensi!`,
+        `Berhasil mengimpor ${addedCount} anggota baru dari calon murid Diterima ke Master Anggota & Absensi!`,
         "success"
       );
     } else {
