@@ -19,6 +19,7 @@ import {
 import SuccessModal, { RegistrationData } from "./SuccessModal";
 import RulesModal from "./RulesModal";
 import ReasonModal, { ReasonFormData } from "./ReasonModal";
+import CustomDatePicker from "./CustomDatePicker";
 import { supabase } from "@/lib/supabase";
 
 export default function RegistrationForm() {
@@ -364,35 +365,21 @@ export default function RegistrationForm() {
             <label className="block text-[11px] sm:text-xs font-medium text-gray-200 mb-1 truncate">
               Tanggal Lahir <span className="text-red-500">*</span>
             </label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-2.5 sm:pl-3 flex items-center pointer-events-none text-red-500">
-                <Calendar className="w-3.5 h-3.5 fill-red-500/20" />
-              </div>
-              <input
-                type="date"
-                value={formData.birthDate}
-                onChange={(e) => {
-                  setFormData({ ...formData, birthDate: e.target.value });
-                  if (errors.birthDate) setErrors({ ...errors, birthDate: "" });
-
-                  if (e.target.value) {
-                    const birth = new Date(e.target.value);
-                    const now = new Date();
-                    let calculatedAge = now.getFullYear() - birth.getFullYear();
-                    const m = now.getMonth() - birth.getMonth();
-                    if (m < 0 || (m === 0 && now.getDate() < birth.getDate())) {
-                      calculatedAge--;
-                    }
-                    if (calculatedAge > 0 && calculatedAge < 100) {
-                      setFormData((prev) => ({ ...prev, birthDate: e.target.value, age: calculatedAge.toString() }));
-                      if (errors.age) setErrors((err) => ({ ...err, age: "" }));
-                    }
-                  }
-                }}
-                className={`w-full bg-[#121216]/90 text-white placeholder-gray-500 text-xs sm:text-sm rounded-xl py-2 sm:py-2.5 pl-8 sm:pl-9 pr-2 border ${errors.birthDate ? "border-red-500" : "border-white/10 hover:border-white/20"
-                  } focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition-all [color-scheme:dark] shadow-inner`}
-              />
-            </div>
+            <CustomDatePicker
+              value={formData.birthDate}
+              onChange={(dateISO, calculatedAge) => {
+                const newAge = calculatedAge !== undefined ? calculatedAge.toString() : formData.age;
+                setFormData((prev) => ({
+                  ...prev,
+                  birthDate: dateISO,
+                  age: newAge || prev.age,
+                }));
+                if (errors.birthDate) setErrors((err) => ({ ...err, birthDate: "" }));
+                if (errors.age && newAge) setErrors((err) => ({ ...err, age: "" }));
+              }}
+              error={errors.birthDate}
+              placeholder="Pilih tgl lahir"
+            />
             {errors.birthDate && (
               <p className="text-[10px] text-red-400 mt-0.5 flex items-center gap-0.5 font-medium">
                 <AlertCircle className="w-2.5 h-2.5" /> {errors.birthDate}
