@@ -703,27 +703,13 @@ export default function AttendancePortal() {
 
   // Filtered members for instant search and browsing below search bar
   const displayMembers = useMemo(() => {
-    const deletedMems = getDeletedMembers();
-    const isMemberDeleted = (m: MemberRecord) => {
-      const id = (m.id || "").toLowerCase().trim();
-      const memId = (m.member_id || "").toLowerCase().trim();
-      const name = (m.full_name || "").toLowerCase().trim();
-      const phone = (m.phone || "").replace(/\D/g, "");
-      return (
-        (memId !== "" && deletedMems.includes(memId)) ||
-        (id !== "" && deletedMems.includes(id)) ||
-        (name !== "" && deletedMems.includes(name)) ||
-        (phone !== "" && phone.length >= 8 && deletedMems.includes(phone))
-      );
-    };
-
-    const validMembers = members.filter((m) => !isMemberDeleted(m));
-    if (!searchQuery.trim()) return validMembers;
+    if (!searchQuery.trim()) return members;
     const q = searchQuery.toLowerCase().trim();
-    return validMembers.filter((m) => {
+    return members.filter((m) => {
       return (
         (m.full_name || "").toLowerCase().includes(q) ||
-        (m.belt_level || "").toLowerCase().includes(q)
+        (m.belt_level || "").toLowerCase().includes(q) ||
+        (m.member_id || "").toLowerCase().includes(q)
       );
     });
   }, [members, searchQuery]);

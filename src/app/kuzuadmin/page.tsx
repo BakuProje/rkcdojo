@@ -4098,7 +4098,8 @@ export default function KuzuAdminPage() {
                     <tr className="bg-slate-100 border-y border-slate-300 text-slate-700 uppercase text-[10px]">
                       <th className="py-2.5 px-3">No</th>
                       <th className="py-2.5 px-3">Nama Lengkap</th>
-                      <th className="py-2.5 px-3">Gender / Usia</th>
+                      <th className="py-2.5 px-3">Gender</th>
+                      <th className="py-2.5 px-3">Usia</th>
                       <th className="py-2.5 px-3">WhatsApp</th>
                       <th className="py-2.5 px-3">Status / Instansi</th>
                       <th className="py-2.5 px-3">Status Penerimaan</th>
@@ -4109,7 +4110,8 @@ export default function KuzuAdminPage() {
                       <tr key={r.reg_id}>
                         <td className="py-2 px-3">{i + 1}</td>
                         <td className="py-2 px-3 font-bold">{r.full_name}</td>
-                        <td className="py-2 px-3">{r.gender} ({r.age} th)</td>
+                        <td className="py-2 px-3">{r.gender}</td>
+                        <td className="py-2 px-3">{r.age ? `${r.age} th` : "-"}</td>
                         <td className="py-2 px-3 font-mono">{r.whatsapp}</td>
                         <td className="py-2 px-3">{r.institution ? `${r.status} (${r.institution})` : r.status}</td>
                         <td className="py-2 px-3 font-semibold">{r.registration_status || "Baru"}</td>
@@ -4373,15 +4375,21 @@ export default function KuzuAdminPage() {
                     <span className="font-bold text-white text-sm sm:text-base">{selectedRecord.full_name}</span>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2 border-b border-white/5 pb-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 border-b border-white/5 pb-2.5">
                     <div>
                       <span className="text-gray-400 block text-xs">Jenis Kelamin</span>
                       <span className="font-semibold text-gray-200">{selectedRecord.gender}</span>
                     </div>
                     <div>
-                      <span className="text-gray-400 block text-xs">Umur / Tgl Lahir</span>
+                      <span className="text-gray-400 block text-xs">Umur</span>
                       <span className="font-semibold text-gray-200">
-                        {selectedRecord.age} th ({selectedRecord.birth_date})
+                        {selectedRecord.age ? `${selectedRecord.age} Tahun` : "-"}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-gray-400 block text-xs">Tanggal Lahir</span>
+                      <span className="font-semibold text-gray-200">
+                        {selectedRecord.birth_date || "-"}
                       </span>
                     </div>
                   </div>

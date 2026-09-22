@@ -1269,7 +1269,7 @@ export default function Home() {
               <div className="flex items-start gap-2.5 text-xs text-gray-300 leading-relaxed pt-1">
                 <MapPin className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5" />
                 <div>
-                  <p>Jl. Sukamaju 1 No. 28 RT 005/RW 006</p>
+                  <p>Jl. Sukamaju 1 No. 2B RT 005/RW 006</p>
                   <p>Kel. Tamamaung, Kec. Panakkukang</p>
                   <p>Kota Makassar, Sulawesi Selatan</p>
                 </div>
