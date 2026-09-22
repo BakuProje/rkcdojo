@@ -396,16 +396,14 @@ export default function KuzuAdminPage() {
       const isDeleted = (m: MemberRecord) => {
         const id = (m.id || "").toLowerCase().trim();
         const memId = (m.member_id || "").toLowerCase().trim();
-        const name = (m.full_name || "").toLowerCase().trim();
-        const phone = (m.phone || "").replace(/\D/g, "");
 
+        // If this member corresponds to any approved registration, it is NOT deleted
         if (
           approvedRegs.some(
             (a) =>
               (a.reg_id && a.reg_id.toLowerCase().trim() === memId) ||
               (a.id && a.id.toLowerCase().trim() === id) ||
-              (a.full_name && a.full_name.toLowerCase().trim() === name) ||
-              (phone && a.whatsapp && a.whatsapp.replace(/\D/g, "") === phone)
+              (a.reg_id && id === `mem-${a.reg_id.toLowerCase().trim()}`)
           )
         ) {
           return false;
@@ -413,9 +411,7 @@ export default function KuzuAdminPage() {
 
         return (
           (memId !== "" && deletedMems.includes(memId)) ||
-          (id !== "" && deletedMems.includes(id)) ||
-          (name !== "" && deletedMems.includes(name)) ||
-          (phone !== "" && phone.length >= 8 && deletedMems.includes(phone))
+          (id !== "" && deletedMems.includes(id))
         );
       };
 
@@ -425,13 +421,14 @@ export default function KuzuAdminPage() {
 
       // Auto-enroll all approved registrations
       approvedRegs.forEach((r) => {
+        const regId = (r.reg_id || r.id || "").toLowerCase().trim();
         const exists = list.some(
           (m) =>
-            (m.member_id && r.reg_id && m.member_id.toLowerCase() === r.reg_id.toLowerCase()) ||
-            (m.full_name && r.full_name && m.full_name.toLowerCase().trim() === r.full_name.toLowerCase().trim()) ||
-            (r.whatsapp && m.phone === r.whatsapp)
+            (m.member_id && regId && m.member_id.toLowerCase().trim() === regId) ||
+            (m.id && regId && m.id.toLowerCase().trim() === `mem-${regId}`) ||
+            (r.id && m.id && m.id === r.id)
         );
-        if (!exists) {
+        if (!exists && r.reg_id) {
           list.push({
             id: `mem-${r.reg_id}`,
             member_id: r.reg_id,
@@ -1038,16 +1035,17 @@ export default function KuzuAdminPage() {
 
       // 3. Auto-enroll ALL non-deleted approved registrations into Master Anggota list
       allApprovedList.forEach((r) => {
+        const regId = (r.reg_id || r.id || "").toLowerCase().trim();
         const exists = list.some(
           (m) =>
-            (m.member_id && r.reg_id && m.member_id.toLowerCase() === r.reg_id.toLowerCase()) ||
-            (m.full_name && r.full_name && m.full_name.toLowerCase().trim() === r.full_name.toLowerCase().trim()) ||
-            (r.whatsapp && m.phone === r.whatsapp)
+            (m.member_id && regId && m.member_id.toLowerCase().trim() === regId) ||
+            (m.id && regId && m.id.toLowerCase().trim() === `mem-${regId}`) ||
+            (r.id && m.id && m.id === r.id)
         );
-        if (!exists) {
+        if (!exists && (r.reg_id || r.id)) {
           list.push({
-            id: `mem-${r.reg_id}`,
-            member_id: r.reg_id,
+            id: `mem-${r.reg_id || r.id}`,
+            member_id: r.reg_id || r.id,
             full_name: r.full_name.trim(),
             belt_level: r.motivation && r.motivation.includes("Sabuk") ? r.motivation : "Sabuk Putih (Kyu 10)",
             phone: r.whatsapp,
@@ -1341,9 +1339,8 @@ export default function KuzuAdminPage() {
     // 2. Filter out ONLY this member safely from adminMembers
     const isTarget = (m: MemberRecord) => {
       if (memberDbId && m.id && m.id === memberDbId) return true;
-      if (memberId && m.member_id && m.member_id.toLowerCase() === memberId.toLowerCase()) return true;
-      if (memberName && m.full_name && m.full_name.toLowerCase().trim() === memberName.toLowerCase().trim()) return true;
-      if (memberPhone && m.phone && m.phone.replace(/\D/g, "") === memberPhone.replace(/\D/g, "") && memberPhone.replace(/\D/g, "").length >= 8) return true;
+      if (memberId && m.member_id && m.member_id.toLowerCase().trim() === memberId.toLowerCase().trim()) return true;
+      if (memberId && m.id && m.id.toLowerCase().trim() === `mem-${memberId.toLowerCase().trim()}`) return true;
       return false;
     };
 
@@ -1355,10 +1352,8 @@ export default function KuzuAdminPage() {
     setRecords((prev) => {
       const filteredRecs = prev.filter(
         (r) =>
-          (memberId ? r.reg_id !== memberId : true) &&
-          (memberDbId ? r.id !== memberDbId : true) &&
-          (memberName ? r.full_name.toLowerCase().trim() !== memberName.toLowerCase().trim() : true) &&
-          (memberPhone && r.whatsapp ? r.whatsapp.replace(/\D/g, "") !== memberPhone.replace(/\D/g, "") : true)
+          (memberId ? r.reg_id.toLowerCase().trim() !== memberId.toLowerCase().trim() : true) &&
+          (memberDbId ? r.id !== memberDbId : true)
       );
       localStorage.setItem("rkc_offline_registrations", JSON.stringify(filteredRecs));
       return filteredRecs;
@@ -1366,8 +1361,7 @@ export default function KuzuAdminPage() {
 
     // 3. Also remove any today attendance logs for this member
     const isTargetAtt = (a: AttendanceRecord) => {
-      if (memberId && a.member_id && a.member_id.toLowerCase() === memberId.toLowerCase()) return true;
-      if (memberName && a.member_name && a.member_name.toLowerCase().trim() === memberName.toLowerCase().trim()) return true;
+      if (memberId && a.member_id && a.member_id.toLowerCase().trim() === memberId.toLowerCase().trim()) return true;
       return false;
     };
 
@@ -1477,19 +1471,18 @@ export default function KuzuAdminPage() {
       const cleanMems = getDeletedMembers().filter(
         (d) =>
           d !== a.reg_id.toLowerCase() &&
-          d !== (a.id || "").toLowerCase() &&
-          d !== a.full_name.toLowerCase().trim() &&
-          (a.whatsapp ? d !== a.whatsapp.replace(/\D/g, "") : true)
+          d !== (a.id || "").toLowerCase()
       );
       localStorage.setItem("rkc_deleted_members", JSON.stringify(cleanMems));
 
+      const regId = (a.reg_id || a.id || "").toLowerCase().trim();
       const alreadyExists = updated.some(
         (m) =>
-          (m.member_id && m.member_id.toLowerCase() === a.reg_id.toLowerCase()) ||
-          (m.full_name && a.full_name && m.full_name.toLowerCase().trim() === a.full_name.toLowerCase().trim()) ||
-          (a.whatsapp && m.phone === a.whatsapp)
+          (m.member_id && regId && m.member_id.toLowerCase().trim() === regId) ||
+          (m.id && regId && m.id.toLowerCase().trim() === `mem-${regId}`) ||
+          (a.id && m.id && m.id === a.id)
       );
-      if (!alreadyExists) {
+      if (!alreadyExists && a.reg_id) {
         const newM: MemberRecord = {
           id: `mem-${a.reg_id}`,
           member_id: a.reg_id,
@@ -1642,14 +1635,12 @@ export default function KuzuAdminPage() {
         const deletedMems = getDeletedMembers().filter(
           (d) =>
             d !== regId.toLowerCase() &&
-            d !== (rec.id || "").toLowerCase() &&
-            d !== rec.full_name.toLowerCase().trim() &&
-            (rec.whatsapp ? d !== rec.whatsapp.replace(/\D/g, "") : true)
+            d !== (rec.id || "").toLowerCase()
         );
         localStorage.setItem("rkc_deleted_members", JSON.stringify(deletedMems));
 
         const deletedRegs = getDeletedRegistrations().filter(
-          (d) => d !== regId && d !== rec.id && (rec.whatsapp ? d !== rec.whatsapp.replace(/\D/g, "") : true)
+          (d) => d !== regId && d !== rec.id
         );
         localStorage.setItem("rkc_deleted_registrations", JSON.stringify(deletedRegs));
       } catch (e) { }
@@ -1658,10 +1649,11 @@ export default function KuzuAdminPage() {
         id: `mem-${regId}`,
         member_id: regId, // ID Anggota resmi karateka untuk login & presensi
         full_name: rec.full_name.trim(),
-        belt_level: "Sabuk Putih (Kyu 10)",
+        belt_level: rec.motivation && rec.motivation.includes("Sabuk") ? rec.motivation : "Sabuk Putih (Kyu 10)",
         phone: rec.whatsapp,
         dojo_branch: "Racing Kyokushin Club",
         gender: rec.gender as any,
+        age: rec.age,
         is_active: true,
         joined_date: new Date().toISOString().split("T")[0],
       };
@@ -1669,10 +1661,9 @@ export default function KuzuAdminPage() {
       setAdminMembers((prev) => {
         const filtered = prev.filter(
           (m) =>
-            m.member_id !== regId &&
-            m.id !== `mem-${regId}` &&
-            (rec.whatsapp ? m.phone !== rec.whatsapp : true) &&
-            m.full_name.toLowerCase() !== rec.full_name.toLowerCase()
+            (m.member_id ? m.member_id.toLowerCase().trim() !== regId.toLowerCase().trim() : true) &&
+            (m.id ? m.id.toLowerCase().trim() !== `mem-${regId.toLowerCase().trim()}` : true) &&
+            (rec.id ? m.id !== rec.id : true)
         );
         const updated = [memberToSave, ...filtered];
         localStorage.setItem("rkc_members_list", JSON.stringify(updated));
@@ -1719,9 +1710,9 @@ export default function KuzuAdminPage() {
       setAdminMembers((prev) => {
         const updated = prev.filter(
           (m) =>
-            m.member_id !== regId &&
-            m.id !== `mem-${regId}` &&
-            (rec ? m.full_name.toLowerCase() !== rec.full_name.toLowerCase() : true)
+            (m.member_id ? m.member_id.toLowerCase().trim() !== regId.toLowerCase().trim() : true) &&
+            (m.id ? m.id.toLowerCase().trim() !== `mem-${regId.toLowerCase().trim()}` : true) &&
+            (rec?.id ? m.id !== rec.id : true)
         );
         localStorage.setItem("rkc_members_list", JSON.stringify(updated));
         return updated;
@@ -1789,10 +1780,9 @@ export default function KuzuAdminPage() {
 
     // 3. Remove from adminMembers & rkc_members_list
     const isTargetMem = (m: MemberRecord) => {
-      if (regId && m.member_id && m.member_id.toLowerCase() === regId.toLowerCase()) return true;
-      if (dbId && m.id && (m.id === dbId || m.id === `mem-${regId}`)) return true;
-      if (fullName && m.full_name && m.full_name.toLowerCase().trim() === fullName.toLowerCase()) return true;
-      if (phone && m.phone && m.phone.replace(/\D/g, "") === phone.replace(/\D/g, "") && phone.replace(/\D/g, "").length >= 8) return true;
+      if (regId && m.member_id && m.member_id.toLowerCase().trim() === regId.toLowerCase().trim()) return true;
+      if (regId && m.id && m.id.toLowerCase().trim() === `mem-${regId.toLowerCase().trim()}`) return true;
+      if (dbId && m.id && m.id === dbId) return true;
       return false;
     };
     const updatedMems = adminMembers.filter((m) => !isTargetMem(m));
@@ -1801,8 +1791,7 @@ export default function KuzuAdminPage() {
 
     // 4. Remove attendances for this member
     const isTargetAtt = (a: AttendanceRecord) => {
-      if (regId && a.member_id && a.member_id.toLowerCase() === regId.toLowerCase()) return true;
-      if (fullName && a.member_name && a.member_name.toLowerCase().trim() === fullName.toLowerCase()) return true;
+      if (regId && a.member_id && a.member_id.toLowerCase().trim() === regId.toLowerCase().trim()) return true;
       return false;
     };
     const updatedAtts = adminAttendances.filter((a) => !isTargetAtt(a));
@@ -1832,21 +1821,12 @@ export default function KuzuAdminPage() {
       if (dbId && isUUID(dbId)) {
         await supabase.from("registrations").delete().eq("id", dbId);
       }
-      if (fullName) {
-        await supabase.from("registrations").delete().ilike("full_name", fullName);
-      }
-      if (phone) {
-        await supabase.from("registrations").delete().eq("whatsapp", phone);
-      }
 
       if (regId) {
         await supabase.from("members").delete().eq("member_id", regId);
       }
       if (dbId) {
         await supabase.from("members").delete().eq("id", dbId);
-      }
-      if (fullName) {
-        await supabase.from("members").delete().ilike("full_name", fullName);
       }
 
       if (regId) {

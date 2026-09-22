@@ -352,11 +352,13 @@ export default function AttendancePortal() {
       // Normalize dojo_branch and sync age from approved registrations
       localList = localList.map((m) => {
         const isDojoAddress = !m.dojo_branch || m.dojo_branch.toLowerCase().startsWith("jl") || m.dojo_branch.toLowerCase().includes("sukamaju");
+        const memId = (m.member_id || "").toLowerCase().trim();
+        const mId = (m.id || "").toLowerCase().trim();
         const regMatch = allApproved.find(
           (r) =>
-            (m.member_id && r.reg_id && m.member_id.toLowerCase() === r.reg_id.toLowerCase()) ||
-            (m.full_name && r.full_name && m.full_name.toLowerCase().trim() === r.full_name.toLowerCase().trim()) ||
-            (m.phone && r.whatsapp && m.phone === r.whatsapp)
+            (memId && r.reg_id && memId === r.reg_id.toLowerCase().trim()) ||
+            (mId && r.reg_id && mId === `mem-${r.reg_id.toLowerCase().trim()}`) ||
+            (r.id && m.id && m.id === r.id)
         );
         return {
           ...m,
@@ -368,16 +370,17 @@ export default function AttendancePortal() {
 
       // 3. Auto-enroll all approved registrations
       allApproved.forEach((r) => {
+        const regId = (r.reg_id || r.id || "").toLowerCase().trim();
         const exists = localList.some(
           (m) =>
-            (m.member_id && r.reg_id && m.member_id.toLowerCase() === r.reg_id.toLowerCase()) ||
-            (m.full_name && r.full_name && m.full_name.toLowerCase().trim() === r.full_name.toLowerCase().trim()) ||
-            (r.whatsapp && m.phone === r.whatsapp)
+            (m.member_id && regId && m.member_id.toLowerCase().trim() === regId) ||
+            (m.id && regId && m.id.toLowerCase().trim() === `mem-${regId}`) ||
+            (r.id && m.id && m.id === r.id)
         );
-        if (!exists) {
+        if (!exists && (r.reg_id || r.id)) {
           localList.push({
-            id: `mem-${r.reg_id}`,
-            member_id: r.reg_id || `RKC-${Math.floor(100 + Math.random() * 900)}`,
+            id: `mem-${r.reg_id || r.id}`,
+            member_id: r.reg_id || r.id || `RKC-${Math.floor(100 + Math.random() * 900)}`,
             full_name: r.full_name,
             belt_level: r.motivation && r.motivation.includes("Sabuk") ? r.motivation : "Sabuk Putih (Kyu 10)",
             phone: r.whatsapp,
