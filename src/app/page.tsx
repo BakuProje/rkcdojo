@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
+import { useLenis } from "lenis/react";
 import {
   Users,
   Calendar,
@@ -45,54 +46,115 @@ export default function Home() {
   const [activeSection, setActiveSection] = useState("beranda");
   const [scrolled, setScrolled] = useState(false);
   const [showNavbar, setShowNavbar] = useState(true);
-  const [lastScrollY, setLastScrollY] = useState(0);
 
-  // Monitor scroll position for active section & smart navbar hide on scroll down / show on scroll up
-  useEffect(() => {
-    const handleScroll = () => {
-      const currentScrollY = window.scrollY;
+  const lenis = useLenis();
 
-      // Scrolled styling (bg dark)
-      setScrolled(currentScrollY > 20);
+  // Smooth navigation click handler with Lenis & Instant Drawer Close
+  const handleNavClick = useCallback(
+    (href: string) => {
+      // 1. Immediately close mobile menu and unblock body scroll
+      setMobileMenuOpen(false);
+      document.body.style.overflow = "";
 
-      // Smart navbar: hide on scroll down, show on scroll up
-      if (currentScrollY <= 50) {
-        setShowNavbar(true);
-      } else if (currentScrollY > lastScrollY && currentScrollY > 80) {
-        // Scrolling DOWN -> HIDE navbar
-        setShowNavbar(false);
-      } else if (currentScrollY < lastScrollY) {
-        // Scrolling UP -> SHOW navbar
-        setShowNavbar(true);
-      }
-      setLastScrollY(currentScrollY);
+      if (href.startsWith("#")) {
+        const targetId = href.replace("#", "");
+        const targetEl = document.getElementById(targetId) || document.querySelector(href);
 
-      const sections = [
-        "beranda",
-        "tentang",
-        "program",
-        "mengapa",
-        "pelatih",
-        "jadwal",
-      ];
-      const scrollPosition = currentScrollY + 250;
+        if (targetEl) {
+          const navOffset = 70;
 
-      for (const section of sections) {
-        const el = document.getElementById(section);
-        if (el) {
-          const top = el.offsetTop;
-          const height = el.offsetHeight;
-          if (scrollPosition >= top && scrollPosition < top + height) {
-            setActiveSection(section);
-            break;
+          // Immediate, ultra-smooth Lenis momentum glide
+          if (lenis) {
+            lenis.scrollTo(targetEl as HTMLElement, {
+              offset: -navOffset,
+              duration: 1.1,
+              easing: (t: number) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+              immediate: false,
+              lock: false,
+            });
+          } else {
+            const y = targetEl.getBoundingClientRect().top + window.scrollY - navOffset;
+            window.scrollTo({
+              top: y,
+              behavior: "smooth",
+            });
+          }
+
+          if (typeof window !== "undefined" && window.history?.pushState) {
+            window.history.pushState(null, "", href);
           }
         }
+      }
+    },
+    [lenis]
+  );
+
+  // Performance-optimized scroll listener & IntersectionObserver (zero layout thrashing)
+  useEffect(() => {
+    let lastY = typeof window !== "undefined" ? window.scrollY : 0;
+    let ticking = false;
+
+    const updateScrollState = () => {
+      const currentY = window.scrollY;
+
+      const isScrolled = currentY > 20;
+      setScrolled((prev) => (prev !== isScrolled ? isScrolled : prev));
+
+      if (currentY <= 50) {
+        setShowNavbar((prev) => (!prev ? true : prev));
+      } else if (currentY > lastY + 8 && currentY > 80) {
+        setShowNavbar((prev) => (prev ? false : prev));
+      } else if (currentY < lastY - 8) {
+        setShowNavbar((prev) => (!prev ? true : prev));
+      }
+
+      lastY = currentY;
+      ticking = false;
+    };
+
+    const handleScroll = () => {
+      if (!ticking) {
+        window.requestAnimationFrame(updateScrollState);
+        ticking = true;
       }
     };
 
     window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, [lastScrollY]);
+
+    // Asynchronous IntersectionObserver for section tracking
+    const sections = [
+      "beranda",
+      "tentang",
+      "program",
+      "mengapa",
+      "pelatih",
+      "jadwal",
+    ];
+    const observers: IntersectionObserver[] = [];
+
+    sections.forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) {
+        const observer = new IntersectionObserver(
+          (entries) => {
+            entries.forEach((entry) => {
+              if (entry.isIntersecting) {
+                setActiveSection((prev) => (prev !== id ? id : prev));
+              }
+            });
+          },
+          { rootMargin: "-20% 0px -60% 0px", threshold: 0 }
+        );
+        observer.observe(el);
+        observers.push(observer);
+      }
+    });
+
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      observers.forEach((obs) => obs.disconnect());
+    };
+  }, []);
 
   // Lock body scroll when mobile menu is open
   useEffect(() => {
@@ -105,6 +167,62 @@ export default function Home() {
       document.body.style.overflow = "";
     };
   }, [mobileMenuOpen]);
+
+  // Animation Variants for Mobile Navigation Drawer (Muncul 1 per 1 / Staggered Cascade)
+  const mobileDrawerVariants = {
+    closed: {
+      opacity: 0,
+      transition: {
+        duration: 0.18,
+        ease: "easeInOut",
+      },
+    },
+    open: {
+      opacity: 1,
+      transition: {
+        duration: 0.25,
+        ease: "easeOut",
+        staggerChildren: 0.065,
+        delayChildren: 0.06,
+      },
+    },
+  };
+
+  const mobileItemVariants = {
+    closed: {
+      opacity: 0,
+      y: 22,
+      scale: 0.94,
+    },
+    open: {
+      opacity: 1,
+      y: 0,
+      scale: 1,
+      transition: {
+        type: "spring",
+        stiffness: 340,
+        damping: 24,
+      },
+    },
+  };
+
+  const mobileCtaVariants = {
+    closed: {
+      opacity: 0,
+      y: 22,
+      scale: 0.95,
+    },
+    open: {
+      opacity: 1,
+      y: 0,
+      scale: 1,
+      transition: {
+        type: "spring",
+        stiffness: 300,
+        damping: 22,
+      },
+    },
+  };
 
   // Navbar Links
   const navLinks = [
@@ -122,15 +240,24 @@ export default function Home() {
       {/* 1. TOP NAVBAR (Smart Auto-Hide on Scroll Down, Show on Scroll Up)         */}
       {/* ========================================================================= */}
       <header
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 transform ${showNavbar || mobileMenuOpen ? "translate-y-0" : "-translate-y-full"
-          } ${scrolled
-            ? "bg-black/95 backdrop-blur-md py-3 shadow-2xl"
+        className={`fixed top-0 left-0 right-0 z-40 transition-all duration-300 transform ${
+          showNavbar || mobileMenuOpen ? "translate-y-0" : "-translate-y-full"
+        } ${
+          scrolled
+            ? "bg-black/95 py-3 shadow-2xl"
             : "bg-transparent py-4 sm:py-5"
-          }`}
+        }`}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
           {/* Logo / Brand (Left) */}
-          <Link href="#beranda" className="flex items-center gap-3 group">
+          <Link
+            href="#beranda"
+            onClick={(e) => {
+              e.preventDefault();
+              handleNavClick("#beranda");
+            }}
+            className="flex items-center gap-3 group"
+          >
             <div className="flex flex-col">
               <span className="font-black italic text-2xl sm:text-3xl tracking-tighter text-[#E50914] font-display leading-none group-hover:text-red-400 transition-colors">
                 RKC
@@ -146,128 +273,160 @@ export default function Home() {
             {navLinks.map((link) => {
               const isActive = activeSection === link.id;
               return (
-                <a
+                <button
+                  type="button"
                   key={link.id}
-                  href={link.href}
-                  className={`text-sm font-semibold transition-all relative py-1 ${isActive ? "text-[#E50914]" : "text-gray-300 hover:text-white"
-                    }`}
+                  onClick={() => handleNavClick(link.href)}
+                  className={`text-sm font-semibold transition-all relative py-1 cursor-pointer select-none ${
+                    isActive ? "text-[#E50914]" : "text-gray-300 hover:text-white"
+                  }`}
                 >
                   {link.name}
                   {isActive && (
                     <motion.div
                       layoutId="navUnderline"
                       className="absolute bottom-0 left-0 right-0 h-[2.5px] bg-[#E50914] rounded-full"
+                      transition={{ type: "spring", stiffness: 380, damping: 30 }}
                     />
                   )}
-                </a>
+                </button>
               );
             })}
           </nav>
 
           {/* Action CTA Button (Only visible on Desktop xl+, hidden on iPad and mobile) */}
           <div className="hidden xl:flex items-center gap-3">
-            <Link
-              href="/pendaftaran"
-              className="bg-[#E50914] hover:bg-[#c40811] text-white text-xs sm:text-sm font-extrabold py-2.5 sm:py-3 px-6 sm:px-7 rounded-xl sm:rounded-2xl transition-all duration-300 shadow-red-glow hover:shadow-red-glow-lg tracking-wide uppercase cursor-pointer"
-            >
-              DAFTAR SEKARANG
-            </Link>
+            <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+              <Link
+                href="/pendaftaran"
+                className="bg-[#E50914] hover:bg-[#c40811] text-white text-xs sm:text-sm font-extrabold py-2.5 sm:py-3 px-6 sm:px-7 rounded-xl sm:rounded-2xl transition-all duration-300 shadow-red-glow hover:shadow-red-glow-lg tracking-wide uppercase cursor-pointer block"
+              >
+                DAFTAR SEKARANG
+              </Link>
+            </motion.div>
           </div>
 
-          {/* Mobile & Tablet (iPad) Menu Toggle (Garis 3) */}
+          {/* Mobile & Tablet (iPad) Menu Toggle (Garis 3 - Smooth Animated) */}
           <button
+            type="button"
             onClick={() => setMobileMenuOpen(true)}
-            className="xl:hidden p-2.5 rounded-xl text-white hover:bg-white/10 transition-colors cursor-pointer"
-            aria-label="Open navigation menu"
+            className="xl:hidden p-2.5 rounded-xl text-white bg-white/5 hover:bg-white/10 active:bg-white/20 border border-white/10 transition-colors cursor-pointer flex items-center justify-center relative overflow-hidden group shadow-md"
+            aria-label="Buka Menu Navigasi"
           >
-            <Menu className="w-6 h-6" />
+            <div className="w-6 h-5 flex flex-col justify-between items-center relative">
+              <span className="w-6 h-[2.5px] bg-white rounded-full transition-all group-hover:bg-[#E50914]" />
+              <span className="w-4 group-hover:w-6 h-[2.5px] bg-[#E50914] rounded-full transition-all self-end group-hover:self-center" />
+              <span className="w-6 h-[2.5px] bg-white rounded-full transition-all group-hover:bg-[#E50914]" />
+            </div>
           </button>
         </div>
+      </header>
 
-        {/* Fullscreen Mobile Navigation Drawer (Garis 3 - Sesuai Gambar 3) */}
-        <AnimatePresence>
-          {mobileMenuOpen && (
+      {/* ========================================================================= */}
+      {/* MOBILE FULLSCREEN NAVIGATION DRAWER (Efek Masuk Muncul 1 per 1 Staggered) */}
+      {/* ========================================================================= */}
+      <AnimatePresence>
+        {mobileMenuOpen && (
+          <motion.div
+            key="mobile-drawer"
+            variants={mobileDrawerVariants}
+            initial="closed"
+            animate="open"
+            exit="closed"
+            className="xl:hidden fixed inset-0 z-[100] w-full h-[100dvh] flex flex-col justify-between overflow-y-auto bg-black/95"
+          >
+            {/* Fullscreen Background: bggaris3.png */}
+            <div className="absolute inset-0 z-0 pointer-events-none">
+              <Image
+                src="/images/bggaris3.png"
+                alt="Menu Background"
+                fill
+                priority
+                sizes="100vw"
+                className="object-cover object-center w-full h-full"
+              />
+            </div>
+
+            {/* Top Header Bar inside Drawer */}
             <motion.div
-              initial={{ opacity: 0, scale: 0.98 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.98 }}
-              transition={{ duration: 0.25 }}
-              className="xl:hidden fixed inset-0 z-[100] w-full h-[100dvh] flex flex-col justify-between overflow-y-auto"
+              variants={mobileItemVariants}
+              className="relative z-10 p-6 flex items-center justify-between"
             >
-              {/* Fullscreen Background: bggaris3.png (Jelas Tanpa Lapisan Gelap) */}
-              <div className="absolute inset-0 z-0 pointer-events-none">
-                <Image
-                  src="/images/bggaris3.png"
-                  alt="Menu Background"
-                  fill
-                  priority
-                  sizes="100vw"
-                  className="object-cover object-center w-full h-full"
-                />
-              </div>
+              {/* Brand Logo */}
+              <button
+                type="button"
+                onClick={() => handleNavClick("#beranda")}
+                className="flex items-center gap-3 group text-left cursor-pointer"
+              >
+                <div className="flex flex-col">
+                  <span className="font-black italic text-2xl tracking-tighter text-[#E50914] font-display leading-none">
+                    RKC
+                  </span>
+                  <span className="text-[9px] font-bold tracking-[0.2em] text-white uppercase mt-0.5 font-display">
+                    RACING KYOKUSHIN CLUB
+                  </span>
+                </div>
+              </button>
 
-              {/* Top Header Bar inside Drawer */}
-              <div className="relative z-10 p-6 flex items-center justify-between">
-                {/* Brand Logo */}
-                <Link
-                  href="#beranda"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center gap-3 group"
-                >
-                  <div className="flex flex-col">
-                    <span className="font-black italic text-2xl tracking-tighter text-[#E50914] font-display leading-none">
-                      RKC
-                    </span>
-                    <span className="text-[9px] font-bold tracking-[0.2em] text-white uppercase mt-0.5 font-display">
-                      RACING KYOKUSHIN CLUB
-                    </span>
-                  </div>
-                </Link>
+              {/* Close Button 'X' */}
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  document.body.style.overflow = "";
+                }}
+                className="w-10 h-10 rounded-full bg-black/60 hover:bg-black/90 text-white flex items-center justify-center transition-all border border-white/20 cursor-pointer shadow-xl active:scale-90"
+                aria-label="Tutup menu"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </motion.div>
 
-                {/* Close Button 'X' */}
-                <button
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="w-10 h-10 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center transition-all border border-white/20 cursor-pointer shadow-lg backdrop-blur-sm"
-                  aria-label="Close menu"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              {/* Center Navigation Links (Matching Image 3 style) */}
-              <div className="relative z-10 flex flex-col items-center justify-center space-y-3.5 px-6 my-auto w-full max-w-sm mx-auto">
-                {navLinks.map((link) => {
-                  const isActive = activeSection === link.id;
-                  return (
-                    <a
-                      key={link.id}
-                      href={link.href}
-                      onClick={() => setMobileMenuOpen(false)}
-                      className={`w-full text-center py-3.5 px-6 rounded-2xl transition-all font-display uppercase tracking-wider text-base sm:text-lg ${isActive
-                        ? "bg-black/60 border border-white/30 text-white font-black shadow-2xl backdrop-blur-sm"
-                        : "text-gray-200 hover:text-white hover:bg-black/30 font-bold"
-                        }`}
+            {/* Center Navigation Links (Muncul 1 per 1 / Staggered Cascade) */}
+            <div className="relative z-10 flex flex-col items-center justify-center space-y-3 px-6 my-auto w-full max-w-sm mx-auto">
+              {navLinks.map((link) => {
+                const isActive = activeSection === link.id;
+                return (
+                  <motion.div
+                    key={link.id}
+                    variants={mobileItemVariants}
+                    className="w-full"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => handleNavClick(link.href)}
+                      className={`w-full block text-center py-3.5 px-6 rounded-2xl transition-all font-display uppercase tracking-wider text-base sm:text-lg cursor-pointer active:scale-95 select-none ${
+                        isActive
+                          ? "bg-black/80 border border-red-500/50 text-white font-black shadow-[0_0_20px_rgba(229,9,20,0.35)]"
+                          : "text-gray-200 hover:text-white hover:bg-black/40 font-bold border border-transparent"
+                      }`}
                     >
                       {link.name}
-                    </a>
-                  );
-                })}
-              </div>
+                    </button>
+                  </motion.div>
+                );
+              })}
+            </div>
 
-              {/* Bottom Action Area (Hanya DAFTAR SEKARANG) */}
-              <div className="relative z-10 p-6 pb-10 flex flex-col w-full max-w-sm mx-auto">
-                <Link
-                  href="/pendaftaran"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="w-full bg-[#E50914] hover:bg-[#c40811] text-white font-extrabold py-4 px-6 rounded-full text-center shadow-red-glow uppercase tracking-wider text-sm transition-all"
-                >
-                  DAFTAR SEKARANG
-                </Link>
-              </div>
+            {/* Bottom Action Area (DAFTAR SEKARANG - Muncul Mengikuti Cascade) */}
+            <motion.div
+              variants={mobileCtaVariants}
+              className="relative z-10 p-6 pb-10 flex flex-col w-full max-w-sm mx-auto"
+            >
+              <Link
+                href="/pendaftaran"
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  document.body.style.overflow = "";
+                }}
+                className="w-full block bg-[#E50914] hover:bg-[#c40811] active:scale-95 text-white font-extrabold py-4 px-6 rounded-full text-center shadow-red-glow hover:shadow-red-glow-lg uppercase tracking-wider text-sm transition-all cursor-pointer"
+              >
+                DAFTAR SEKARANG
+              </Link>
             </motion.div>
-          )}
-        </AnimatePresence>
-      </header>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ========================================================================= */}
       {/* 2. HERO / BERANDA (100dvh Fullscreen di Layar Mobile, Pas di Tengah)     */}
@@ -367,6 +526,10 @@ export default function Home() {
 
               <a
                 href="#program"
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleNavClick("#program");
+                }}
                 className="bg-transparent hover:bg-white/10 border border-white/40 hover:border-white text-white font-bold text-xs sm:text-sm py-3 sm:py-3.5 px-4 sm:px-7 rounded-xl sm:rounded-2xl transition-all duration-300 tracking-wider uppercase text-center whitespace-nowrap cursor-pointer"
               >
                 LIHAT PROGRAM
@@ -506,6 +669,10 @@ export default function Home() {
               <div>
                 <a
                   href="#program"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handleNavClick("#program");
+                  }}
                   className="inline-block text-xs sm:text-sm font-extrabold text-[#E50914] hover:text-red-400 transition-colors group cursor-pointer"
                 >
                   Pelajari Lebih Lanjut

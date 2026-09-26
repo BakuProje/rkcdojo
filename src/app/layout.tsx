@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import SmoothScroll from "@/components/SmoothScroll";
 import "./globals.css";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.rkcdojo.id";
@@ -194,7 +195,7 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-screen bg-[#0d0e12] antialiased selection:bg-red-600 selection:text-white">
-        {children}
+        <SmoothScroll>{children}</SmoothScroll>
       </body>
     </html>
   );

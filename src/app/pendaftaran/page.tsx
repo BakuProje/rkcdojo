@@ -41,7 +41,7 @@ export default function PendaftaranPage() {
         </div>
 
         {/* Right Column (50% on Desktop / Full on Mobile): Form Container */}
-        <div className="w-full h-full relative flex items-center justify-center p-3 sm:p-5 md:p-8 lg:p-8 xl:p-10 overflow-y-auto no-scrollbar">
+        <div data-lenis-prevent className="w-full h-full relative flex items-center justify-center p-3 sm:p-5 md:p-8 lg:p-8 xl:p-10 overflow-y-auto no-scrollbar">
           <div className="w-full max-w-[580px] my-auto py-2 sm:py-6">
             <RegistrationForm />
           </div>

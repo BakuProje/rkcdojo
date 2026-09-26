@@ -1,4 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+@import "lenis/dist/lenis.css";
 
 @tailwind base;
 @tailwind components;
@@ -16,6 +17,18 @@
     padding: 0;
   }
 
+  html.lenis, html.lenis body {
+    height: auto;
+  }
+
+  .lenis.lenis-smooth {
+    scroll-behavior: auto !important;
+  }
+
+  .lenis.lenis-smooth [data-lenis-prevent] {
+    overscroll-behavior: contain;
+  }
+
   body {
     background-color: #08080a;
     color: var(--foreground);
@@ -28,6 +41,12 @@
   h1, h2, h3, h4, h5, h6, .font-display {
     font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif;
   }
+}
+
+/* GPU Hardware Acceleration for ultra-fast rendering & 60-120fps animations */
+.gpu-layer {
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
 
 /* Globally Hide All Scrollbars across all browsers and devices */
