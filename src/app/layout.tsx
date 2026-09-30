@@ -14,25 +14,32 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: "RKC Kyokushin Club Makassar - Dojo Karate Makassar",
+    default: "RKC Kyokushin Club Makassar - Dojo Karate & Pendaftaran Murid Baru",
     template: "%s | RKC Kyokushin Club Makassar",
   },
   description:
-    "Pendaftaran Murid Baru & Portal Presensi Dojo RKC Kyokushin Makassar. Kelas Anak, Remaja, dan Dewasa. Karate For A Better Tomorrow.",
+    "Dojo Karate Kyokushin Resmi di Makassar (RKC Dojo). Pendaftaran murid baru kelas Anak, Remaja, dan Dewasa. Latihan fisik, disiplin mental & teknik beladiri full contact.",
   applicationName: "RKC Kyokushin Club",
   keywords: [
-    "Karate Makassar",
-    "Kyokushin Makassar",
+    "rkc dojo",
+    "rkcdojo",
+    "rkcdojo.id",
+    "www.rkcdojo.id",
     "RKC Kyokushin Club",
     "Racing Kyokushin Club",
+    "RKC Makassar",
+    "Karate Makassar",
+    "Kyokushin Makassar",
     "Dojo Karate Makassar",
-    "Pendaftaran Karate Baru",
-    "Bela Diri Makassar",
-    "Martial Arts Makassar",
+    "Dojo RKC Makassar",
+    "Tempat Latihan Karate di Makassar",
+    "Pendaftaran Karate Makassar",
     "Kursus Karate Anak Makassar",
-    "Latihan Karate Dewasa",
+    "Latihan Bela Diri Makassar",
     "Full Contact Karate Indonesia",
     "Dojo Kyokushin Sulawesi Selatan",
+    "Les Karate Makassar",
+    "Bela Diri Anak Makassar",
     "Absensi Karate RKC",
   ],
   authors: [{ name: "RKC Kyokushin Club Makassar", url: siteUrl }],
@@ -45,6 +52,15 @@ export const metadata: Metadata = {
   },
   alternates: {
     canonical: siteUrl,
+  },
+  verification: {
+    google: "google78dc4184ddd2497f",
+  },
+  other: {
+    "geo.region": "ID-SN",
+    "geo.placename": "Makassar",
+    "geo.position": "-5.140223;119.442611",
+    ICBM: "-5.140223, 119.442611",
   },
   icons: {
     icon: [
@@ -64,11 +80,11 @@ export const metadata: Metadata = {
     ],
   },
   openGraph: {
-    title: "RKC Kyokushin Club Makassar - Dojo Karate Makassar",
+    title: "RKC Kyokushin Club Makassar - Dojo Karate & Pendaftaran Murid Baru",
     description:
-      "Pendaftaran Murid Baru & Portal Presensi Dojo RKC Kyokushin Makassar. Kelas Anak, Remaja, dan Dewasa. Karate For A Better Tomorrow.",
+      "Dojo Karate Kyokushin Resmi di Makassar (RKC Dojo). Buka pendaftaran murid baru kelas Anak, Remaja, dan Dewasa. Karate For A Better Tomorrow.",
     url: siteUrl,
-    siteName: "RKC Kyokushin Club Makassar",
+    siteName: "RKC Kyokushin Club Makassar (rkcdojo.id)",
     locale: "id_ID",
     type: "website",
     images: [
@@ -76,16 +92,16 @@ export const metadata: Metadata = {
         url: "/images/bannerrkc.png",
         width: 1200,
         height: 630,
-        alt: "Banner RKC Kyokushin Club Makassar",
+        alt: "Banner RKC Kyokushin Club Makassar - Dojo Karate",
         type: "image/png",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "RKC Kyokushin Club Makassar - Dojo Karate Makassar",
+    title: "RKC Kyokushin Club Makassar - Dojo Karate & Pendaftaran Murid Baru",
     description:
-      "Pendaftaran Murid Baru & Portal Presensi Dojo RKC Kyokushin Makassar. Kelas Anak, Remaja, dan Dewasa. Karate For A Better Tomorrow.",
+      "Dojo Karate Kyokushin Resmi di Makassar (RKC Dojo). Pendaftaran murid baru kelas Anak, Remaja, dan Dewasa. Karate For A Better Tomorrow.",
     images: ["/images/bannerrkc.png"],
     creator: "@rkckarate",
     site: "@rkckarate",
@@ -110,16 +126,27 @@ const jsonLd = {
   "@context": "https://schema.org",
   "@graph": [
     {
-      "@type": "SportsClub",
+      "@type": ["SportsClub", "ExerciseGym", "SportsActivityLocation"],
       "@id": `${siteUrl}/#organization`,
       name: "RKC Kyokushin Club Makassar",
-      alternateName: ["Racing Kyokushin Club", "RKC Karate Makassar", "Dojo RKC"],
+      alternateName: [
+        "RKC Dojo",
+        "rkcdojo",
+        "rkcdojo.id",
+        "RKC Dojo Makassar",
+        "Racing Kyokushin Club",
+        "RKC Karate Makassar",
+        "Dojo RKC Tamamaung",
+      ],
       url: siteUrl,
       logo: `${siteUrl}/images/logo.png`,
       image: `${siteUrl}/images/bannerrkc.png`,
       description:
-        "Dojo Karate Kyokushin resmi di Makassar. Melayani pendaftaran kelas bela diri anak-anak, remaja, dan dewasa dengan instruktur bersertifikasi internasional.",
+        "Dojo Karate Kyokushin resmi di Makassar (RKC Dojo). Melayani pendaftaran kelas bela diri anak-anak, remaja, dan dewasa dengan instruktur sabuk hitam bersertifikasi internasional.",
       telephone: "+6281527641306",
+      priceRange: "$$",
+      currenciesAccepted: "IDR",
+      paymentAccepted: "Cash, QRIS, Bank Transfer",
       address: {
         "@type": "PostalAddress",
         streetAddress: "Jl. Sukamaju 1 No 2B RT 005/RW 006, Kel Tamamaung, Kec Panakkukang",
@@ -147,18 +174,72 @@ const jsonLd = {
           closes: "10:00",
         },
       ],
-      priceRange: "$$",
+      hasOfferCatalog: {
+        "@type": "OfferCatalog",
+        name: "Program Latihan Karate RKC",
+        itemListElement: [
+          {
+            "@type": "Offer",
+            itemOffered: {
+              "@type": "Service",
+              name: "Kelas Karate Anak (Kids Class)",
+              description: "Latihan pembentukan disiplin, fokus, motorik, dan teknik dasar karate untuk usia 6 - 12 tahun.",
+            },
+          },
+          {
+            "@type": "Offer",
+            itemOffered: {
+              "@type": "Service",
+              name: "Kelas Karate Remaja (Teens Class)",
+              description: "Pengembangan stamina, fisik tangguh, mental juara, dan teknik kumite karate untuk usia 13 - 17 tahun.",
+            },
+          },
+          {
+            "@type": "Offer",
+            itemOffered: {
+              "@type": "Service",
+              name: "Kelas Karate Dewasa (Adults Class)",
+              description: "Latihan bela diri praktis, kebugaran intensif, dan tradisi karate Kyokushin untuk usia 18 tahun ke atas.",
+            },
+          },
+        ],
+      },
     },
     {
       "@type": "WebSite",
       "@id": `${siteUrl}/#website`,
       url: siteUrl,
       name: "RKC Kyokushin Club Makassar",
+      alternateName: ["RKC Dojo", "rkcdojo.id"],
       description: "Pendaftaran Murid Baru & Portal Presensi Dojo RKC Kyokushin Makassar",
       publisher: {
         "@id": `${siteUrl}/#organization`,
       },
       inLanguage: "id-ID",
+    },
+    {
+      "@type": "BreadcrumbList",
+      "@id": `${siteUrl}/#breadcrumb`,
+      itemListElement: [
+        {
+          "@type": "ListItem",
+          position: 1,
+          name: "Beranda",
+          item: `${siteUrl}`,
+        },
+        {
+          "@type": "ListItem",
+          position: 2,
+          name: "Pendaftaran Murid Baru",
+          item: `${siteUrl}/pendaftaran`,
+        },
+        {
+          "@type": "ListItem",
+          position: 3,
+          name: "Portal Presensi",
+          item: `${siteUrl}/absen`,
+        },
+      ],
     },
   ],
 };
